@@ -1,0 +1,8 @@
+numpy
+random
+tensorflow
+keras
+deap
+matplotlib
+time
+os

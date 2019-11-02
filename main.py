@@ -12,8 +12,8 @@ nLayerSpecies = 4
 popSizeBits = 5
 layerPopSize = 2**popSizeBits
 netPopSize = 50
-nGens = 60
-iters = 4000 # AE iters
+nGens = 5
+iters = 1000 # AE iters
 
 # Chromosome definition
 layerGeneBits = {'L2':8,

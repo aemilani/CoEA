@@ -9,11 +9,11 @@ startTime = time.time()
 
 # Variables
 nLayerSpecies = 4
-popSizeBits = 4
+popSizeBits = 5
 layerPopSize = 2**popSizeBits
-netPopSize = 20
-nGens = 10
-iters = 100 # AE iters
+netPopSize = 50
+nGens = 60
+iters = 4000 # AE iters
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -153,8 +153,8 @@ def layersCreditAssignment(netPop):
                 fits.sort()
                 if len(fits) > 1:
                     if fits[1] < 100:
-                        #avgFit = np.average(fits[:2]) # avg of top 2
-                        avgFit = fits[0]
+                        avgFit = np.average(fits[:2]) # avg of top 2
+                        #avgFit = fits[0]
                     else:
                         avgFit = fits[0]
                 else:
@@ -429,7 +429,26 @@ endTime = time.time()
 runTime = endTime - startTime
 print()
 print('Total run time is:',runTime/3600,'hours')
+
+#%%
 plt.plot(maxNetRho)
+plt.xlabel('Generations')
+plt.ylabel('Rho_MK')
+plt.title('Max Rho_MK per generation')
+plt.show()
+
+plt.plot(avgNetRho)
+plt.xlabel('Generations')
+plt.ylabel('Rho_MK')
+plt.title('Average Rho_MK per generation')
+plt.show()
+
+for i in range(nLayerSpecies):
+    plt.plot(np.array(avgLayerFits)[:,i])
+    plt.xlabel('Generation')
+    plt.ylabel('"Min" Fitness')
+    plt.title('Average "Min" Fitness of the Layer Species nr. {} Per Generation'.format(i))
+    plt.show()
 
 #%%
 # hash codes of strings of chromosomes

@@ -9,13 +9,13 @@ startTime = time.time()
 
 # Variables
 nLayerSpecies = 4
-popSizeBits = 5
+popSizeBits = 4
 layerPopSize = 2**popSizeBits
-netPopSize = 50
-nGens = 5
-iters = 1000 # AE iters
+netPopSize = 20
+nGens = 10
+iters = 100 # AE iters
 
-# Chromosome definition
+# number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
                  'SP':8,
                  'SR':8,
@@ -23,6 +23,7 @@ layerGeneBits = {'L2':8,
                  'init':2,
                  'n_neuron':3}
 
+# number of bits allocated for each network chromosome gene
 netGeneBits = {'batch':3,
                'optim':2,
                'learn_rate':8,
@@ -34,6 +35,7 @@ netGeneBits = {'batch':3,
                'h3':popSizeBits,
                'h4':popSizeBits} #layer genes always at the end of the chromosome
 
+# range of values for each layer chromosome gene
 layerGeneRange = [{'L2':np.logspace(-8, 0, 2**layerGeneBits['L2'], dtype='float32'),
                  'SP':np.linspace(0.001, 0.1, 2**layerGeneBits['SP'], dtype='float32'),
                  'SR':np.logspace(-3, 1, 2**layerGeneBits['SR'], dtype='float32'),
@@ -49,6 +51,7 @@ layerGeneRange[1]['n_neuron'] = np.arange(14, 29, 2)
 layerGeneRange[2]['n_neuron'] = np.arange(20, 91, 10)
 layerGeneRange[3]['n_neuron'] = np.arange(50, 121, 10)
 
+# range of values for each network chromosome gene
 netGeneRange = {'batch':[2**i for i in range(8)],
                 'optim':['adam','nadam','rmsprop','adadelta'],
                 'learn_rate':np.logspace(-8, 1, 2**netGeneBits['learn_rate'], dtype='float32'),
@@ -61,22 +64,23 @@ netGeneRange = {'batch':[2**i for i in range(8)],
                 'h4':[i for i in range(2**netGeneBits['h4'])]}
 
 # dictionary is ordered in this version of Python
-sidxLayer = [] # start indexes for genes
-eidxLayer = [] # end indexes for genes
+sidxLayer = [] # start indexes for layer chromosome genes
+eidxLayer = [] # end indexes for layer chromosome genes
 s = 0
 for i in layerGeneBits:
     sidxLayer.append(s)
     eidxLayer.append(s + layerGeneBits[i])
     s = s + layerGeneBits[i]
     
-sidxNet = [] # start indexes for genes
-eidxNet = [] # end indexes for genes
+sidxNet = [] # start indexes for network chromosome genes
+eidxNet = [] # end indexes for network chromosome genes
 s = 0
 for i in netGeneBits:
     sidxNet.append(s)
     eidxNet.append(s + netGeneBits[i])
     s = s + netGeneBits[i]
 
+# chromosome lengths
 layerIndSize = sum(layerGeneBits.values())
 netIndSize = sum(netGeneBits.values())
 
@@ -86,26 +90,15 @@ pos = len(netGeneBits) - nLayerSpecies
 layerWeights = (-1, -1) # avg, min
 netWeights = (1, -1) # Rho_MK, ValLoss
 
-def hyperVolume(pop):
-    mseMax = 100
-    rhoMax = 20
-    P = pop.copy()
-    P.sort(key=lambda x: x.fitness.values[0])
-    i = 0
-    s = 0
-    for ind in P:
-        s += (ind.fitness.values[1] - i) * (mseMax - ind.fitness.values[0])
-        i = ind.fitness.values[1]
-    return s/(mseMax*rhoMax)
-
 #%%
-
+# DEAP library classes definition
 creator.create('FitnessLayer', base.Fitness, weights = layerWeights)
 creator.create('FitnessNet', base.Fitness, weights = netWeights)
 creator.create('LayerIndividual', list, fitness = creator.FitnessLayer)
 creator.create('NetIndividual', list, fitness = creator.FitnessNet)
 
 def getNetParams(netInd):
+    '''Returns a dictionary of the parameters corresponding to a network chromosome'''
     netIndStr = str(netInd).strip('[]').replace(' ', '').replace(',', '').replace('\n','')
     netIndDecimal = []
     for i in range(len(netGeneBits.keys())):
@@ -134,6 +127,8 @@ def evalFitness(netInd):
         layerInd = layerSpecies[netParams['h'+str(i+1)]]
         layerParams = getLayerParams(layerInd, i)
         layerParamsList.append(layerParams)
+    netInd.net_params = netParams
+    netInd.layer_params = layerParamsList
     return autoEncoder(netParams, layerParamsList,
                        nLayers=nLayerSpecies, iters=iters)
 
@@ -158,8 +153,8 @@ def layersCreditAssignment(netPop):
                 fits.sort()
                 if len(fits) > 1:
                     if fits[1] < 100:
-                        avgFit = np.average(fits[:2]) # avg of top 2
-                        #avgFit = fits[0]
+                        #avgFit = np.average(fits[:2]) # avg of top 2
+                        avgFit = fits[0]
                     else:
                         avgFit = fits[0]
                 else:
@@ -293,33 +288,41 @@ for i in range(len(layerPopulation)):
 print()
 for ind in netPopulation:
     print(ind.fitness.values)
-    
-#%%
+
+# for saving populations and fitnesses
 avgLayerFits, avgNetRho, minLayerFits, maxNetRho = [], [], [], []
+netPops, layerPops = [], []
+
+initialNetPop = toolbox.clone(netPopulation)
+initialLayerPop = toolbox.clone(layerPopulation)
+for i in range(nLayerSpecies):
+    initialLayerPop[i].sort(key=lambda x: x.index)
+netPops.append(initialNetPop)
+layerPops.append(initialLayerPop)
+
+avgSpeciesFits = []
+minSpeciesFits = []
+for spec in layerPopulation:
+    fits = []
+    for ind in spec:
+        fits.append(ind.fitness.values[1])
+    avgSpeciesFits.append(np.average(fits))
+    minSpeciesFits.append(np.min(fits))
+avgLayerFits.append(avgSpeciesFits)
+minLayerFits.append(minSpeciesFits)
+
+rhos = []
+for ind in netPopulation:
+    rhos.append(ind.fitness.values[0])
+avgNetRho.append(np.average(rhos))
+maxNetRho.append(np.max(rhos))
+
 #%%
 for gen in range(nGens):
-    avgSpeciesFits = []
-    minSpeciesFits = []
-    for spec in layerPopulation:
-        fits = []
-        for ind in spec:
-            fits.append(ind.fitness.values[1])
-        avgSpeciesFits.append(np.average(fits))
-        minSpeciesFits.append(np.min(fits))
-    avgLayerFits.append(avgSpeciesFits)
-    minLayerFits.append(minSpeciesFits)
-    rhos = []
-    for ind in netPopulation:
-        rhos.append(ind.fitness.values[0])
-    avgNetRho.append(np.average(rhos))
-    maxNetRho.append(np.max(rhos))
     print()
     print('Generation: ', gen+1)
     elapsedTime = time.time() - startTime
     print('Elapsed Time: ', elapsedTime/60, ' minutes')
-    print()
-    for ind in netPopulation:
-        print(ind.fitness.values)
     # network population evolution
     for ind in netPopulation:
         if ind.fitness.values[1] == 100.0:
@@ -392,9 +395,59 @@ for gen in range(nGens):
         ind.rank = i
     for i in range(len(layerPopulation)):
         layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)
+    # saving fitnesses
+    avgSpeciesFits = []
+    minSpeciesFits = []
+    for spec in layerPopulation:
+        fits = []
+        for ind in spec:
+            fits.append(ind.fitness.values[1])
+        avgSpeciesFits.append(np.average(fits))
+        minSpeciesFits.append(np.min(fits))
+    avgLayerFits.append(avgSpeciesFits)
+    minLayerFits.append(minSpeciesFits)
+    rhos = []
+    for ind in netPopulation:
+        rhos.append(ind.fitness.values[0])
+    avgNetRho.append(np.average(rhos))
+    maxNetRho.append(np.max(rhos))
+    # saving populations
+    pop = toolbox.clone(layerPopulation)
+    for i in range(nLayerSpecies):
+        pop[i].sort(key= lambda x: x.index)
+    layerPops.append(pop)
+    pop = toolbox.clone(netPopulation)
+    netPops.append(pop)
+    del pop
+    # printing network population fitnesses
+    print()
+    for ind in netPopulation:
+        print(ind.fitness.values)
     
 #%%
 endTime = time.time()
 runTime = endTime - startTime
 print()
 print('Total run time is:',runTime/3600,'hours')
+plt.plot(maxNetRho)
+
+#%%
+# hash codes of strings of chromosomes
+netPopIDs = []
+for pop in netPops:
+    lis = []
+    for ind in pop:
+        lis.append(hash(str(ind)))
+    netPopIDs.append(lis)
+
+# index of each chromosome of each generation population in the next generation population
+indexes = toolbox.clone(netPopIDs)
+for i in range(len(netPops)-1):
+    for j in range(netPopSize):
+        _ = np.equal(netPopIDs[i][j], netPopIDs[i+1])
+        if bool(np.isin(True, _)):
+            indexes[i][j] = list(_).index(True)
+        else:
+            indexes[i][j] = None
+for k in range(netPopSize):
+    indexes[-1][k] = None

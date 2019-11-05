@@ -51,8 +51,8 @@ def autoEncoder(netParams, layerParamsList, nLayers=4, iters=4000):
     rn.seed(rand_seed)
     tf.set_random_seed(rand_seed)
         
-    iter_per_epoch = np.ceil(len(data_norm)/batch)
-    epochs = int(iters/iter_per_epoch)
+    iter_per_epoch = int(np.ceil(len(data_norm)/batch))
+    epochs = int(np.ceil(iters/iter_per_epoch))
     
     if optim == 'adam':
         opt = optimizers.Adam(lr=learn_rate, beta_1=mom, decay=decay, clipvalue=0.3)
@@ -151,5 +151,5 @@ def autoEncoder(netParams, layerParamsList, nLayers=4, iters=4000):
             
     RHO_MK = 0.01 if np.isnan(max(abs(rho_mk))) else max(abs(rho_mk))
     LOSS = 100 if np.isnan(valLoss) else valLoss
-
+    
     return RHO_MK, LOSS

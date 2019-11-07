@@ -13,7 +13,7 @@ popSizeBits = 5
 layerPopSize = 2**popSizeBits
 netPopSize = 50
 nGens = 60
-iters = 4000 # AE iters
+iters = 1000 # AE iters
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -153,8 +153,8 @@ def layersCreditAssignment(netPop):
                 fits.sort()
                 if len(fits) > 1:
                     if fits[1] < 100:
-                        avgFit = np.average(fits[:2]) # avg of top 2
-                        #avgFit = fits[0]
+                        #avgFit = np.average(fits[:2]) # avg of top 2
+                        avgFit = fits[0]
                     else:
                         avgFit = fits[0]
                 else:
@@ -389,10 +389,10 @@ for gen in range(nGens):
     fits = map(toolbox.evaluateNet, netPopulation)
     for ind, fit in zip(netPopulation, fits):
         ind.fitness.values = fit
-    layersCreditAssignment(netPopulation)
     netPopulation = toolbox.selectNSGA2(netPopulation, k=netPopSize)
     for i, ind in enumerate(netPopulation):
         ind.rank = i
+    layersCreditAssignment(netPopulation)
     for i in range(len(layerPopulation)):
         layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)
     # saving fitnesses

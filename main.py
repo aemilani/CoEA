@@ -292,8 +292,6 @@ fits = toolbox.map(toolbox.evaluateNet, netPopulation)
 for fit, ind in zip(fits, netPopulation):
     ind.fitness.values = fit
 netPopulation = orderNetPop(netPopulation)
-for i, ind in enumerate(netPopulation):
-    ind.rank = i
 layersCreditAssignment(netPopulation)
 for i in range(len(layerPopulation)):
     layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)
@@ -402,8 +400,6 @@ for gen in range(nGens):
     for ind, fit in zip(netPopulation, fits):
         ind.fitness.values = fit
     netPopulation = orderNetPop(netPopulation)
-    for i, ind in enumerate(netPopulation):
-        ind.rank = i
     layersCreditAssignment(netPopulation)
     for i in range(len(layerPopulation)):
         layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)

@@ -14,7 +14,7 @@ popSizeBits = 5
 layerPopSize = 2**popSizeBits
 netPopSize = 50
 nGens = 60
-iters = 1 # AE iters
+iters = 1000 # AE iters
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -240,7 +240,7 @@ def selRankRoulette(individuals, k=2):
     return [individuals[i] for i in selection]
 
 def orderNetPop(netPop, k=netPopSize):
-    fronts = toolbox.selectNSGA2(netPop, k=k)
+    fronts = toolbox.selectNSGA2fronts(netPop, k=k)
     for i in range(len(fronts)):
         for ind in fronts[i]:
             ind.rank = i
@@ -265,7 +265,8 @@ toolbox.register('mate', cxNetLayers)
 toolbox.register('mutateNetStructure', mutStructure)
 toolbox.register('mutateNetParameters', mutParameters)
 toolbox.register('mutateLayerParameters', mutLayerInd)
-toolbox.register("selectNSGA2", tools_modified.selNSGA2, nd='standard')
+toolbox.register("selectNSGA2fronts", tools_modified.selNSGA2, nd='standard')
+toolbox.register("selectNSGA2", tools.selNSGA2, nd='standard')
 toolbox.register("selectRoulette", selRankRoulette)
 
 #%%

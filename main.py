@@ -242,12 +242,13 @@ def selRankRoulette(individuals, k=2):
 def orderNetPop(netPop, k=netPopSize):
     fronts = toolbox.selectNSGA2fronts(netPop, k=k)
     for i in range(len(fronts)):
-        for ind in fronts[i]:
-            ind.rank = i
+        fronts[i].sort(key=lambda x: x.fitness.values[0], reverse=True)
     orderedNetPop = []
     for front in fronts:
         for ind in front:
             orderedNetPop.append(ind)
+    for i in range(len(orderedNetPop)):
+        orderedNetPop[i].rank = i
     return orderedNetPop
 
 toolbox = base.Toolbox()

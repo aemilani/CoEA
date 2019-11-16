@@ -240,14 +240,25 @@ def selRankRoulette(individuals, k=2):
     return [individuals[i] for i in selection]
 
 def orderNetPop(netPop, k=netPopSize):
+<<<<<<< HEAD
     fronts = toolbox.selectNSGA2(netPop, k=k)
     for i in range(len(fronts)):
         for ind in fronts[i]:
             ind.rank = i
+=======
+    fronts = toolbox.selectNSGA2fronts(netPop, k=k)
+    for i in range(len(fronts)):
+        fronts[i].sort(key=lambda x: x.fitness.values[0], reverse=True)
+>>>>>>> develop
     orderedNetPop = []
     for front in fronts:
         for ind in front:
             orderedNetPop.append(ind)
+<<<<<<< HEAD
+=======
+    for i in range(len(orderedNetPop)):
+        orderedNetPop[i].rank = i
+>>>>>>> develop
     return orderedNetPop
 
 toolbox = base.Toolbox()
@@ -265,7 +276,12 @@ toolbox.register('mate', cxNetLayers)
 toolbox.register('mutateNetStructure', mutStructure)
 toolbox.register('mutateNetParameters', mutParameters)
 toolbox.register('mutateLayerParameters', mutLayerInd)
+<<<<<<< HEAD
 toolbox.register("selectNSGA2", tools_modified.selNSGA2, nd='standard')
+=======
+toolbox.register("selectNSGA2fronts", tools_modified.selNSGA2, nd='standard')
+toolbox.register("selectNSGA2", tools.selNSGA2, nd='standard')
+>>>>>>> develop
 toolbox.register("selectRoulette", selRankRoulette)
 
 #%%
@@ -292,8 +308,11 @@ fits = toolbox.map(toolbox.evaluateNet, netPopulation)
 for fit, ind in zip(fits, netPopulation):
     ind.fitness.values = fit
 netPopulation = orderNetPop(netPopulation)
+<<<<<<< HEAD
 for i, ind in enumerate(netPopulation):
     ind.rank = i
+=======
+>>>>>>> develop
 layersCreditAssignment(netPopulation)
 for i in range(len(layerPopulation)):
     layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)
@@ -402,8 +421,11 @@ for gen in range(nGens):
     for ind, fit in zip(netPopulation, fits):
         ind.fitness.values = fit
     netPopulation = orderNetPop(netPopulation)
+<<<<<<< HEAD
     for i, ind in enumerate(netPopulation):
         ind.rank = i
+=======
+>>>>>>> develop
     layersCreditAssignment(netPopulation)
     for i in range(len(layerPopulation)):
         layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)

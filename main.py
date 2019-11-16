@@ -5,6 +5,8 @@ from deap import base, creator, tools
 import matplotlib.pyplot as plt
 import time
 import tools as tools_modified
+import datetime
+import os
 
 startTime = time.time()
 
@@ -441,25 +443,46 @@ print()
 print('Total run time is:',runTime/3600,'hours')
 
 #%%
+date = str(datetime.date.today())
+time = str(datetime.datetime.now().time())[:8].replace(':', '-')
+dirr ='results/{}/{}'.format(date, time)
+
+os.makedirs(dirr)
+
+plt.figure()
 plt.plot(maxNetRho)
 plt.xlabel('Generations')
 plt.ylabel('Rho_MK')
 plt.title('Max Rho_MK per generation')
-plt.show()
+plt.savefig(dirr + '/' + 'Max_Rho_MK_per_generation.png')
 
+plt.figure()
 plt.plot(avgNetRho)
 plt.xlabel('Generations')
 plt.ylabel('Rho_MK')
 plt.title('Average Rho_MK per generation')
-plt.show()
+plt.savefig(dirr + '/' + 'Average_Rho_MK_per_generation.png')
 
 for i in range(nLayerSpecies):
+    plt.figure()
     plt.plot(np.array(avgLayerFits)[:,i])
     plt.xlabel('Generation')
     plt.ylabel('"Min" Fitness')
     plt.title('Average "Min" Fitness of the Layer Species nr. {} Per Generation'.format(i))
-    plt.show()
+    plt.savefig(dirr + '/' + 'Average_Min_Fitness_of_the_Layer_Species_nr_{}_Per_Generation.png'.format(i))
 
+for i, pop in enumerate(netPops):
+    xs, ys = [], []
+    for ind in pop:
+        xs.append(ind.fitness.values[0])
+        ys.append(ind.fitness.values[1])
+    plt.figure()
+    plt.plot(xs, ys)
+    plt.xlabel('Rho_MK')
+    plt.ylabel('val_loss')
+    plt.title('Generation {} front'.format(i))
+    plt.savefig(dirr + '/fronts/' + 'Generation_{}_front.png'.format(i))
+    
 #%%
 # hash codes of strings of chromosomes
 netPopIDs = []

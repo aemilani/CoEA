@@ -241,10 +241,16 @@ def selRankRoulette(individuals, k=2):
 
 def orderNetPop(netPop, k=netPopSize):
 <<<<<<< HEAD
+<<<<<<< HEAD
     fronts = toolbox.selectNSGA2(netPop, k=k)
     for i in range(len(fronts)):
         for ind in fronts[i]:
             ind.rank = i
+=======
+    fronts = toolbox.selectNSGA2fronts(netPop, k=k)
+    for i in range(len(fronts)):
+        fronts[i].sort(key=lambda x: x.fitness.values[0], reverse=True)
+>>>>>>> develop
 =======
     fronts = toolbox.selectNSGA2fronts(netPop, k=k)
     for i in range(len(fronts)):
@@ -255,6 +261,11 @@ def orderNetPop(netPop, k=netPopSize):
         for ind in front:
             orderedNetPop.append(ind)
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    for i in range(len(orderedNetPop)):
+        orderedNetPop[i].rank = i
+>>>>>>> develop
 =======
     for i in range(len(orderedNetPop)):
         orderedNetPop[i].rank = i
@@ -277,8 +288,11 @@ toolbox.register('mutateNetStructure', mutStructure)
 toolbox.register('mutateNetParameters', mutParameters)
 toolbox.register('mutateLayerParameters', mutLayerInd)
 <<<<<<< HEAD
+<<<<<<< HEAD
 toolbox.register("selectNSGA2", tools_modified.selNSGA2, nd='standard')
 =======
+=======
+>>>>>>> develop
 toolbox.register("selectNSGA2fronts", tools_modified.selNSGA2, nd='standard')
 toolbox.register("selectNSGA2", tools.selNSGA2, nd='standard')
 >>>>>>> develop
@@ -309,8 +323,11 @@ for fit, ind in zip(fits, netPopulation):
     ind.fitness.values = fit
 netPopulation = orderNetPop(netPopulation)
 <<<<<<< HEAD
+<<<<<<< HEAD
 for i, ind in enumerate(netPopulation):
     ind.rank = i
+=======
+>>>>>>> develop
 =======
 >>>>>>> develop
 layersCreditAssignment(netPopulation)
@@ -422,8 +439,11 @@ for gen in range(nGens):
         ind.fitness.values = fit
     netPopulation = orderNetPop(netPopulation)
 <<<<<<< HEAD
+<<<<<<< HEAD
     for i, ind in enumerate(netPopulation):
         ind.rank = i
+=======
+>>>>>>> develop
 =======
 >>>>>>> develop
     layersCreditAssignment(netPopulation)

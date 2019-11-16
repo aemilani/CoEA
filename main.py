@@ -268,7 +268,6 @@ toolbox.register('mutateNetParameters', mutParameters)
 toolbox.register('mutateLayerParameters', mutLayerInd)
 toolbox.register("selectNSGA2fronts", tools_modified.selNSGA2, nd='standard')
 toolbox.register("selectNSGA2", tools.selNSGA2, nd='standard')
->>>>>>> develop
 toolbox.register("selectRoulette", selRankRoulette)
 
 #%%

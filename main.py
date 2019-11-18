@@ -471,13 +471,15 @@ for i in range(nLayerSpecies):
     plt.title('Average "Min" Fitness of the Layer Species nr. {} Per Generation'.format(i))
     plt.savefig(dirr + '/' + 'Average_Min_Fitness_of_the_Layer_Species_nr_{}_Per_Generation.png'.format(i))
 
+os.makedirs(dirr + '/fronts')
+
 for i, pop in enumerate(netPops):
     xs, ys = [], []
     for ind in pop:
         xs.append(ind.fitness.values[0])
         ys.append(ind.fitness.values[1])
     plt.figure()
-    plt.plot(xs, ys)
+    plt.scatter(xs, ys)
     plt.xlabel('Rho_MK')
     plt.ylabel('val_loss')
     plt.title('Generation {} front'.format(i))

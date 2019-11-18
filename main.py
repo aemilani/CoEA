@@ -447,7 +447,7 @@ date = str(datetime.date.today())
 time = str(datetime.datetime.now().time())[:8].replace(':', '-')
 dirr ='results/{}/{}'.format(date, time)
 
-os.makedirs(dirr)
+os.makedirs(dirr + '/fronts')
 
 plt.figure()
 plt.plot(maxNetRho)
@@ -470,8 +470,6 @@ for i in range(nLayerSpecies):
     plt.ylabel('"Min" Fitness')
     plt.title('Average "Min" Fitness of the Layer Species nr. {} Per Generation'.format(i))
     plt.savefig(dirr + '/' + 'Average_Min_Fitness_of_the_Layer_Species_nr_{}_Per_Generation.png'.format(i))
-
-os.makedirs(dirr + '/fronts')
 
 for i, pop in enumerate(netPops):
     xs, ys = [], []

@@ -15,8 +15,13 @@ nLayerSpecies = 4
 popSizeBits = 6
 layerPopSize = 2**popSizeBits
 netPopSize = 80
+<<<<<<< HEAD
 nGens = 120
 iters = 1000 # AE iters
+=======
+nGens = 80
+iters = 2000 # AE iters
+>>>>>>> 3e413cbfcb8a763fa70ff5de067b91e5f3cc7fb7
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -455,7 +460,7 @@ date = str(datetime.date.today())
 time = str(datetime.datetime.now().time())[:8].replace(':', '-')
 dirr ='results/{}/{}'.format(date, time)
 
-os.makedirs(dirr)
+os.makedirs(dirr + '/fronts')
 
 plt.figure()
 plt.plot(maxNetRho)
@@ -485,7 +490,7 @@ for i, pop in enumerate(netPops):
         xs.append(ind.fitness.values[0])
         ys.append(ind.fitness.values[1])
     plt.figure()
-    plt.plot(xs, ys)
+    plt.scatter(xs, ys)
     plt.xlabel('Rho_MK')
     plt.ylabel('val_loss')
     plt.title('Generation {} front'.format(i))

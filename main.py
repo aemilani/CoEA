@@ -15,13 +15,8 @@ nLayerSpecies = 4
 popSizeBits = 6
 layerPopSize = 2**popSizeBits
 netPopSize = 80
-<<<<<<< HEAD
 nGens = 120
 iters = 1000 # AE iters
-=======
-nGens = 80
-iters = 2000 # AE iters
->>>>>>> 3e413cbfcb8a763fa70ff5de067b91e5f3cc7fb7
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,

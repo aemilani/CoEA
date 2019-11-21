@@ -12,11 +12,11 @@ startTime = time.time()
 
 # Variables
 nLayerSpecies = 4
-popSizeBits = 6
+popSizeBits = 3
 layerPopSize = 2**popSizeBits
-netPopSize = 80
-nGens = 120
-iters = 1000 # AE iters
+netPopSize = 10
+nGens = 3
+iters = 1 # AE iters
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -166,7 +166,7 @@ def layersCreditAssignment(netPop):
                 layerInd.fitness.values = avgFit, minFit
             else:
                 if not layerInd.fitness.valid:
-                    pass
+                    layerInd.fitness.values = (0, 0)
 
 def rand_bin():
     return rn.randint(0,1)
@@ -345,6 +345,7 @@ for gen in range(nGens):
         if ind.fitness.values[1] == 100.0:
             toolbox.mutateNetStructure(ind)
             toolbox.mutateNetParameters(ind)
+            del ind.fitness.values
     nNetTopInds = int(0.7*netPopSize) # number of top 70% network individuals
     oldReached = False
     fits = []
@@ -389,7 +390,7 @@ for gen in range(nGens):
         netPopulation.append(offspring[i])
     # layer population evolution
     nLayerTopInds = int(0.7*layerPopSize) # number of top 70% layer individuals
-    for i, species in layerPopulation:
+    for i, species in enumerate(layerPopulation):
         deletedIndexes = []
         for ind in species[nLayerTopInds:]:
             deletedIndexes.append(ind.index)
@@ -404,9 +405,10 @@ for gen in range(nGens):
         for j, idx in enumerate(newIdxs):
             child = toolbox.clone([ind for ind in species if ind.index==idx][0])
             toolbox.mutateLayerParameters(child, species)
-            del child.fitness.values
             child.index = deletedIndexes[j]
             species.append(child)
+        for idx in newIdxs:
+            del [ind for ind in species if ind.index==idx][0].fitness.values
     # evaluation
     fits = map(toolbox.evaluateNet, netPopulation)
     for ind, fit in zip(netPopulation, fits):

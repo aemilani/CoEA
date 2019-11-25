@@ -5,11 +5,8 @@ from deap import base, creator, tools
 import matplotlib.pyplot as plt
 import time
 import tools as tools_modified
-<<<<<<< HEAD
-=======
 import datetime
 import os
->>>>>>> develop
 
 startTime = time.time()
 
@@ -18,13 +15,10 @@ nLayerSpecies = 4
 popSizeBits = 5
 layerPopSize = 2**popSizeBits
 netPopSize = 50
-<<<<<<< HEAD
 nGens = 60
 iters = 1 # AE iters
-=======
 nGens = 20
 iters = 1000 # AE iters
->>>>>>> develop
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,

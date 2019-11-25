@@ -5,6 +5,11 @@ from deap import base, creator, tools
 import matplotlib.pyplot as plt
 import time
 import tools as tools_modified
+<<<<<<< HEAD
+=======
+import datetime
+import os
+>>>>>>> develop
 
 startTime = time.time()
 
@@ -13,8 +18,13 @@ nLayerSpecies = 4
 popSizeBits = 5
 layerPopSize = 2**popSizeBits
 netPopSize = 50
+<<<<<<< HEAD
 nGens = 60
 iters = 1 # AE iters
+=======
+nGens = 20
+iters = 1000 # AE iters
+>>>>>>> develop
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -162,6 +172,9 @@ def layersCreditAssignment(netPop):
                     avgFit = fits[0]
                 minFit = fits[0]
                 layerInd.fitness.values = avgFit, minFit
+            else:
+                if not layerInd.fitness.valid:
+                    layerInd.fitness.values = (0, 0)
 
 def rand_bin():
     return rn.randint(0,1)
@@ -340,7 +353,8 @@ for gen in range(nGens):
         if ind.fitness.values[1] == 100.0:
             toolbox.mutateNetStructure(ind)
             toolbox.mutateNetParameters(ind)
-    nTopInds = int(0.7*netPopSize) # number of top 70% network individuals
+            del ind.fitness.values
+    nNetTopInds = int(0.7*netPopSize) # number of top 70% network individuals
     oldReached = False
     fits = []
     for ind in netPopulation:
@@ -348,13 +362,13 @@ for gen in range(nGens):
     minFit = min(fits)
     maxFit = max(fits)
     offspring = []
-    idxs = list(np.random.choice(np.arange(nTopInds), size=2, replace=False))
+    idxs = list(np.random.choice(np.arange(nNetTopInds), size=2, replace=False))
     for idx in idxs:
         child = toolbox.clone(netPopulation[idx])
         toolbox.mutateNetParameters(child)
         child.age = 0
         offspring.append(child)
-    bottomInds = toolbox.clone(netPopulation[nTopInds:])
+    bottomInds = toolbox.clone(netPopulation[nNetTopInds:])
     children = toolbox.selectRoulette(bottomInds, k=2)
     toolbox.mate(children[0], children[1])
     for i in range(len(children)):
@@ -383,20 +397,26 @@ for gen in range(nGens):
     for i in range(len(offspring)):
         netPopulation.append(offspring[i])
     # layer population evolution
-    nTopInds = int(0.7*layerPopSize) # number of top 70% layer individuals
-    for species in layerPopulation:
+    nLayerTopInds = int(0.7*layerPopSize) # number of top 70% layer individuals
+    for i, species in enumerate(layerPopulation):
         deletedIndexes = []
-        for ind in species[nTopInds:]:
+        for ind in species[nLayerTopInds:]:
             deletedIndexes.append(ind.index)
-        del species[nTopInds:]
-        idxs = list(np.random.choice(np.arange(nTopInds),
-                                     size=layerPopSize-nTopInds, replace=False))
-        assert len(deletedIndexes) == len(idxs)
-        for i, idx in enumerate(idxs):
-            child = toolbox.clone(species[idx])
+        del species[nLayerTopInds:]
+        remainingIndexes = []
+        for ind in species:
+            remainingIndexes.append(ind.index)
+        newIdxs = list(np.random.choice(remainingIndexes,
+                                     size=layerPopSize-nLayerTopInds,
+                                     replace=False))
+        assert len(deletedIndexes) == len(newIdxs)
+        for j, idx in enumerate(newIdxs):
+            child = toolbox.clone([ind for ind in species if ind.index==idx][0])
             toolbox.mutateLayerParameters(child, species)
-            child.index = deletedIndexes[i]
+            child.index = deletedIndexes[j]
             species.append(child)
+        for idx in newIdxs:
+            del [ind for ind in species if ind.index==idx][0].fitness.values
     # evaluation
     fits = map(toolbox.evaluateNet, netPopulation)
     for ind, fit in zip(netPopulation, fits):
@@ -441,25 +461,46 @@ print()
 print('Total run time is:',runTime/3600,'hours')
 
 #%%
+date = str(datetime.date.today())
+time = str(datetime.datetime.now().time())[:8].replace(':', '-')
+dirr ='results/{}/{}'.format(date, time)
+
+os.makedirs(dirr + '/fronts')
+
+plt.figure()
 plt.plot(maxNetRho)
 plt.xlabel('Generations')
 plt.ylabel('Rho_MK')
 plt.title('Max Rho_MK per generation')
-plt.show()
+plt.savefig(dirr + '/' + 'Max_Rho_MK_per_generation.png')
 
+plt.figure()
 plt.plot(avgNetRho)
 plt.xlabel('Generations')
 plt.ylabel('Rho_MK')
 plt.title('Average Rho_MK per generation')
-plt.show()
+plt.savefig(dirr + '/' + 'Average_Rho_MK_per_generation.png')
 
 for i in range(nLayerSpecies):
+    plt.figure()
     plt.plot(np.array(avgLayerFits)[:,i])
     plt.xlabel('Generation')
     plt.ylabel('"Min" Fitness')
     plt.title('Average "Min" Fitness of the Layer Species nr. {} Per Generation'.format(i))
-    plt.show()
+    plt.savefig(dirr + '/' + 'Average_Min_Fitness_of_the_Layer_Species_nr_{}_Per_Generation.png'.format(i))
 
+for i, pop in enumerate(netPops):
+    xs, ys = [], []
+    for ind in pop:
+        xs.append(ind.fitness.values[0])
+        ys.append(ind.fitness.values[1])
+    plt.figure()
+    plt.scatter(xs, ys)
+    plt.xlabel('Rho_MK')
+    plt.ylabel('val_loss')
+    plt.title('Generation {} front'.format(i))
+    plt.savefig(dirr + '/fronts/' + 'Generation_{}_front.png'.format(i))
+    
 #%%
 # hash codes of strings of chromosomes
 netPopIDs = []

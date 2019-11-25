@@ -12,11 +12,11 @@ startTime = time.time()
 
 # Variables
 nLayerSpecies = 4
-popSizeBits = 3
+popSizeBits = 5
 layerPopSize = 2**popSizeBits
-netPopSize = 10
-nGens = 3
-iters = 1 # AE iters
+netPopSize = 50
+nGens = 20
+iters = 1000 # AE iters
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,

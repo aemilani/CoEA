@@ -11,14 +11,18 @@ import os
 startTime = time.time()
 
 # Variables
+# Number of hidden layers fixed to 4
 nLayerSpecies = 4
+# Size of layer population needs to be a power of 2
 popSizeBits = 5
 layerPopSize = 2**popSizeBits
+# Size of network population needs to be bigger than layer population,
+# so that most of the layers participate in networks
 netPopSize = 50
+# Number of generations
 nGens = 60
-iters = 1 # AE iters
-nGens = 20
-iters = 1000 # AE iters
+# AE training iterations
+iters = 4000
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -68,7 +72,7 @@ netGeneRange = {'batch':[2**i for i in range(8)],
                 'h3':[i for i in range(2**netGeneBits['h3'])],
                 'h4':[i for i in range(2**netGeneBits['h4'])]}
 
-# dictionary is ordered in this version of Python
+# In this version of Python, dictionary is ordered
 sidxLayer = [] # start indexes for layer chromosome genes
 eidxLayer = [] # end indexes for layer chromosome genes
 s = 0
@@ -103,7 +107,7 @@ creator.create('LayerIndividual', list, fitness = creator.FitnessLayer)
 creator.create('NetIndividual', list, fitness = creator.FitnessNet)
 
 def getNetParams(netInd):
-    '''Returns a dictionary of the parameters corresponding to a network chromosome'''
+    """Returns a dictionary of the parameters corresponding to a network chromosome"""
     netIndStr = str(netInd).strip('[]').replace(' ', '').replace(',', '').replace('\n','')
     netIndDecimal = []
     for i in range(len(netGeneBits.keys())):
@@ -114,6 +118,7 @@ def getNetParams(netInd):
     return netParams
 
 def getLayerParams(layerInd, speciesIdx):
+  """Returns a dictionary of the parameters corresponding to a layer chromosome"""
     layerIndStr = str(layerInd).strip('[]').replace(' ', '').replace(',', '').replace('\n','')
     layerIndDecimal = []
     for i in range(len(layerGeneBits.keys())):
@@ -124,6 +129,10 @@ def getLayerParams(layerInd, speciesIdx):
     return layerParams
 
 def evalFitness(netInd):
+  """Calculates the fitness of a network individual
+  Input: network individual
+  Returns: a tuple of fitness values
+  """
     netParams = getNetParams(netInd)
     layerParamsList = []
     for i in range(nLayerSpecies):
@@ -138,6 +147,7 @@ def evalFitness(netInd):
                        nLayers=nLayerSpecies, iters=iters)
 
 def layersCreditAssignment(netPop):
+  """Assigns credits to layer population individuals"""
     layerFitnesses = []
     # includes 4 lists, each with layerPopSize lists. Index here corresponds
     # to index for each ind in layer population, not its order.
@@ -174,6 +184,8 @@ def rand_bin():
     return rn.randint(0,1)
 
 def cxNetLayers(netInd1, netInd2):
+  """Uniform crossover of two networks layers"""
+    # List of layers to swap. 0 is the first layer, and so on.
     idxs = list(set(np.random.randint(0, high=nLayerSpecies, size=nLayerSpecies)))
     for idx in idxs:
         sidx = sidxNet[pos+idx]
@@ -183,7 +195,7 @@ def cxNetLayers(netInd1, netInd2):
         netInd2[sidx:eidx] = container
 
 def mutStructure(netInd):
-    '''mutate one layer index'''
+    """mutate one layer index"""
     mutGene = np.random.randint(pos, pos+nLayerSpecies)
     sidx = sidxNet[mutGene]
     eidx = eidxNet[mutGene]
@@ -191,6 +203,7 @@ def mutStructure(netInd):
     netInd[mutBit] = int(not netInd[mutBit])
 
 def mutParameters(netInd):
+  """Mutate network parameters"""
     netFits = []
     for ind in netPopulation:
         netFits.append(ind.rank)
@@ -208,6 +221,7 @@ def mutParameters(netInd):
         netInd[mutBit] = int(not netInd[mutBit])
 
 def mutLayerInd(layerInd, layerSpecies):
+  """Mutate layer parameters"""
     indFit = layerInd.fitness.values[1]
     fits =[]
     for ind in layerSpecies:
@@ -229,7 +243,7 @@ def mutLayerInd(layerInd, layerSpecies):
         layerInd[mutBit] = int(not layerInd[mutBit])
         
 def selRankRoulette(individuals, k=2):
-    '''replace = False'''
+    "Rank-based Roulette selection"""
     fits = []
     for ind in individuals:
         fits.append(1/(ind.rank+1))
@@ -247,6 +261,7 @@ def selRankRoulette(individuals, k=2):
     return [individuals[i] for i in selection]
 
 def orderNetPop(netPop, k=netPopSize):
+  """Order network population first based of NSGA, and then each front based of Rho_MK"""
     fronts = toolbox.selectNSGA2fronts(netPop, k=k)
     for i in range(len(fronts)):
         fronts[i].sort(key=lambda x: x.fitness.values[0], reverse=True)
@@ -288,6 +303,7 @@ for layer_species in layerPopulation:
         layerInd.index = i
 # initialize net population
 netPopulation = toolbox.netPopulation()
+# All initial layers should participate in networks
 for i in range(layerPopSize):
     binLayerIdx = np.binary_repr(i, popSizeBits)
     for j in range(nLayerSpecies):
@@ -300,8 +316,10 @@ for ind in netPopulation:
 fits = toolbox.map(toolbox.evaluateNet, netPopulation)
 for fit, ind in zip(fits, netPopulation):
     ind.fitness.values = fit
+# order networks population
 netPopulation = orderNetPop(netPopulation)
 layersCreditAssignment(netPopulation)
+# order layers population
 for i in range(len(layerPopulation)):
     layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)
 print()
@@ -343,6 +361,7 @@ for gen in range(nGens):
     elapsedTime = time.time() - startTime
     print('Elapsed Time: ', elapsedTime/60, ' minutes')
     # network population evolution
+    # structural and parametric mutation of diverged networks
     for ind in netPopulation:
         if ind.fitness.values[1] == 100.0:
             toolbox.mutateNetStructure(ind)
@@ -350,6 +369,7 @@ for gen in range(nGens):
             del ind.fitness.values
     nNetTopInds = int(0.7*netPopSize) # number of top 70% network individuals
     oldReached = False
+    # used for calculating mutation probabilities
     fits = []
     for ind in netPopulation:
         fits.append(ind.rank)
@@ -363,6 +383,7 @@ for gen in range(nGens):
         child.age = 0
         offspring.append(child)
     bottomInds = toolbox.clone(netPopulation[nNetTopInds:])
+    # Roulette selection of 2 networks from bottom 30%
     children = toolbox.selectRoulette(bottomInds, k=2)
     toolbox.mate(children[0], children[1])
     for i in range(len(children)):
@@ -376,13 +397,16 @@ for gen in range(nGens):
         offspring.append(child)
     for ind in offspring:
         del ind.fitness.values
+    # delete worst len(offspring)-1 networks
     for i in range(len(offspring) - 1):
         del netPopulation[-1]
     for ind in netPopulation:
         ind.age += 1
         if ind.age >= 10:
             oldReached = True
+    # for now we don't delete the old network
     oldReached = False
+    # delete the oldest network if old reached, else delete worst network
     if oldReached:
         netPopulation.sort(key=lambda x: x.age)
         del netPopulation[-1]
@@ -392,6 +416,7 @@ for gen in range(nGens):
         netPopulation.append(offspring[i])
     # layer population evolution
     nLayerTopInds = int(0.7*layerPopSize) # number of top 70% layer individuals
+    # delete worst 30% of layers
     for i, species in enumerate(layerPopulation):
         deletedIndexes = []
         for ind in species[nLayerTopInds:]:
@@ -400,6 +425,7 @@ for gen in range(nGens):
         remainingIndexes = []
         for ind in species:
             remainingIndexes.append(ind.index)
+        # random selection of layers to mutate
         newIdxs = list(np.random.choice(remainingIndexes,
                                      size=layerPopSize-nLayerTopInds,
                                      replace=False))
@@ -407,8 +433,10 @@ for gen in range(nGens):
         for j, idx in enumerate(newIdxs):
             child = toolbox.clone([ind for ind in species if ind.index==idx][0])
             toolbox.mutateLayerParameters(child, species)
+            # assign the index of one of the deleted layers to the new one
             child.index = deletedIndexes[j]
             species.append(child)
+        # delete the old fitness values of the new layers
         for idx in newIdxs:
             del [ind for ind in species if ind.index==idx][0].fitness.values
     # evaluation

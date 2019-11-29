@@ -22,6 +22,10 @@
   * iters = 100
   
 #### Outputs:
+Evaluating Initial Population...
+
+Initial Population Fitness Values:
+
 (11.373667953863205, 0.28914862871170044)  
 (9.232717356954643, 0.1736980676651001)  
 (9.606802505674105, 0.7317416667938232)  

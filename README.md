@@ -1,5 +1,4 @@
 # A Coevolutionary Framework for Automatic Extraction of a Health Indicator from Vibrational Data using Sparse Autoencoders
----
 
 ### Using the code:
   1. Open main.py

@@ -298,8 +298,7 @@ toolbox.register("selectNSGA2", tools.selNSGA2, nd='standard')
 toolbox.register("selectRoulette", selRankRoulette)
 
 #%%
-print()
-print('Evaluating Initial Populations...')
+print('\nEvaluating Initial Population...\n')
 # initialize layer population
 layerPopulation = [toolbox.layerSpecies() for i in range(nLayerSpecies)]
 # assign idx for each layer individual
@@ -327,7 +326,7 @@ layersCreditAssignment(netPopulation)
 # order layers population
 for i in range(len(layerPopulation)):
     layerPopulation[i] = toolbox.selectNSGA2(layerPopulation[i], k=layerPopSize)
-print()
+print('\nInitial Population Fitness Values:\n')
 for ind in netPopulation:
     print(ind.fitness.values)
 
@@ -361,10 +360,9 @@ maxNetRho.append(np.max(rhos))
 
 #%%
 for gen in range(nGens):
-    print()
-    print('Generation: ', gen+1)
+    print('\nGeneration: ', gen+1)
     elapsedTime = time.time() - startTime
-    print('Elapsed Time: ', elapsedTime/60, ' minutes')
+    print('Elapsed Time: ', elapsedTime/60, ' minutes\n')
     # network population evolution
     # structural and parametric mutation of diverged networks
     for ind in netPopulation:
@@ -477,15 +475,13 @@ for gen in range(nGens):
     netPops.append(pop)
     del pop
     # printing network population fitnesses
-    print()
     for ind in netPopulation:
         print(ind.fitness.values)
     
 #%%
 endTime = time.time()
 runTime = endTime - startTime
-print()
-print('Total run time is:',runTime/3600,'hours')
+print('\nTotal run time is:',runTime/3600,'hours')
 
 #%%
 date = str(datetime.date.today())

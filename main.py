@@ -8,21 +8,26 @@ import tools as tools_modified
 import datetime
 import os
 
+# global random seeds
+# (not to be confused with NN weight initialization random seed)
+np.random.seed(0)
+rn.seed(0)
+
 startTime = time.time()
 
 # Variables
 # Number of hidden layers fixed to 4
 nLayerSpecies = 4
 # Size of layer population needs to be a power of 2
-popSizeBits = 5
+popSizeBits = 3
 layerPopSize = 2**popSizeBits
 # Size of network population needs to be bigger than layer population,
 # so that most of the layers participate in networks
-netPopSize = 50
+netPopSize = 10
 # Number of generations
-nGens = 60
+nGens = 3
 # AE training iterations
-iters = 4000
+iters = 100
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -118,7 +123,7 @@ def getNetParams(netInd):
     return netParams
 
 def getLayerParams(layerInd, speciesIdx):
-  """Returns a dictionary of the parameters corresponding to a layer chromosome"""
+    """Returns a dictionary of the parameters corresponding to a layer chromosome"""
     layerIndStr = str(layerInd).strip('[]').replace(' ', '').replace(',', '').replace('\n','')
     layerIndDecimal = []
     for i in range(len(layerGeneBits.keys())):
@@ -129,10 +134,10 @@ def getLayerParams(layerInd, speciesIdx):
     return layerParams
 
 def evalFitness(netInd):
-  """Calculates the fitness of a network individual
-  Input: network individual
-  Returns: a tuple of fitness values
-  """
+    """Calculates the fitness of a network individual
+    Input: network individual
+    Returns: a tuple of fitness values
+    """
     netParams = getNetParams(netInd)
     layerParamsList = []
     for i in range(nLayerSpecies):
@@ -147,7 +152,7 @@ def evalFitness(netInd):
                        nLayers=nLayerSpecies, iters=iters)
 
 def layersCreditAssignment(netPop):
-  """Assigns credits to layer population individuals"""
+    """Assigns credits to layer population individuals"""
     layerFitnesses = []
     # includes 4 lists, each with layerPopSize lists. Index here corresponds
     # to index for each ind in layer population, not its order.
@@ -184,7 +189,7 @@ def rand_bin():
     return rn.randint(0,1)
 
 def cxNetLayers(netInd1, netInd2):
-  """Uniform crossover of two networks layers"""
+    """Uniform crossover of two networks layers"""
     # List of layers to swap. 0 is the first layer, and so on.
     idxs = list(set(np.random.randint(0, high=nLayerSpecies, size=nLayerSpecies)))
     for idx in idxs:
@@ -203,7 +208,7 @@ def mutStructure(netInd):
     netInd[mutBit] = int(not netInd[mutBit])
 
 def mutParameters(netInd):
-  """Mutate network parameters"""
+    """Mutate network parameters"""
     netFits = []
     for ind in netPopulation:
         netFits.append(ind.rank)
@@ -221,7 +226,7 @@ def mutParameters(netInd):
         netInd[mutBit] = int(not netInd[mutBit])
 
 def mutLayerInd(layerInd, layerSpecies):
-  """Mutate layer parameters"""
+    """Mutate layer parameters"""
     indFit = layerInd.fitness.values[1]
     fits =[]
     for ind in layerSpecies:
@@ -243,7 +248,7 @@ def mutLayerInd(layerInd, layerSpecies):
         layerInd[mutBit] = int(not layerInd[mutBit])
         
 def selRankRoulette(individuals, k=2):
-    "Rank-based Roulette selection"""
+    """Rank-based Roulette selection"""
     fits = []
     for ind in individuals:
         fits.append(1/(ind.rank+1))
@@ -261,7 +266,7 @@ def selRankRoulette(individuals, k=2):
     return [individuals[i] for i in selection]
 
 def orderNetPop(netPop, k=netPopSize):
-  """Order network population first based of NSGA, and then each front based of Rho_MK"""
+    """Order network population first based of NSGA, and then each front based of Rho_MK"""
     fronts = toolbox.selectNSGA2fronts(netPop, k=k)
     for i in range(len(fronts)):
         fronts[i].sort(key=lambda x: x.fitness.values[0], reverse=True)
@@ -487,7 +492,7 @@ date = str(datetime.date.today())
 time = str(datetime.datetime.now().time())[:8].replace(':', '-')
 dirr ='results/{}/{}'.format(date, time)
 
-os.makedirs(dirr + '/fronts')
+os.makedirs(dirr + '/pops')
 
 plt.figure()
 plt.plot(maxNetRho)
@@ -521,7 +526,7 @@ for i, pop in enumerate(netPops):
     plt.xlabel('Rho_MK')
     plt.ylabel('val_loss')
     plt.title('Generation {} front'.format(i))
-    plt.savefig(dirr + '/fronts/' + 'Generation_{}_front.png'.format(i))
+    plt.savefig(dirr + '/pops/' + 'Generation_{}_population.png'.format(i))
     
 #%%
 # hash codes of strings of chromosomes

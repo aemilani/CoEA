@@ -181,9 +181,6 @@ def layersCreditAssignment(netPop):
                     avgFit = fits[0]
                 minFit = fits[0]
                 layerInd.fitness.values = avgFit, minFit
-            else:
-                if not layerInd.fitness.valid:
-                    layerInd.fitness.values = (0, 0)
 
 def rand_bin():
     return rn.randint(0,1)
@@ -439,9 +436,7 @@ for gen in range(nGens):
             # assign the index of one of the deleted layers to the new one
             child.index = deletedIndexes[j]
             species.append(child)
-        # delete the old fitness values of the new layers
-        for idx in newIdxs:
-            del [ind for ind in species if ind.index==idx][0].fitness.values
+            
     # evaluation
     fits = map(toolbox.evaluateNet, netPopulation)
     for ind, fit in zip(netPopulation, fits):

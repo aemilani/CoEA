@@ -19,15 +19,15 @@ startTime = time.time()
 # Number of hidden layers fixed to 4
 nLayerSpecies = 4
 # Size of layer population needs to be a power of 2
-popSizeBits = 3
+popSizeBits = 6
 layerPopSize = 2**popSizeBits
 # Size of network population needs to be bigger than layer population,
 # so that most of the layers participate in networks
-netPopSize = 10
+netPopSize = 80
 # Number of generations
-nGens = 3
+nGens = 1
 # AE training iterations
-iters = 100
+iters = 1000
 
 # number of bits allocated for each layer chromosome gene
 layerGeneBits = {'L2':8,
@@ -417,10 +417,12 @@ for gen in range(nGens):
     # layer population evolution
     nLayerTopInds = int(0.7*layerPopSize) # number of top 70% layer individuals
     # delete worst 30% of layers
+    deleted_indexes = []
     for i, species in enumerate(layerPopulation):
         deletedIndexes = []
         for ind in species[nLayerTopInds:]:
             deletedIndexes.append(ind.index)
+        deleted_indexes.append(deletedIndexes)
         del species[nLayerTopInds:]
         remainingIndexes = []
         for ind in species:
@@ -436,10 +438,14 @@ for gen in range(nGens):
             # assign the index of one of the deleted layers to the new one
             child.index = deletedIndexes[j]
             species.append(child)
-            
     # evaluation
-    fits = map(toolbox.evaluateNet, netPopulation)
-    for ind, fit in zip(netPopulation, fits):
+    for ind in netPopulation:
+        for i in range(nLayerSpecies):
+            if ind.net_params['h{}'.format(i+1)] in deleted_indexes[i]:
+                del ind.fitness.values
+    invalid_net_inds = [ind for ind in netPopulation if not ind.fitness.valid]
+    fits = map(toolbox.evaluateNet, invalid_net_inds)
+    for ind, fit in zip(invalid_net_inds, fits):
         ind.fitness.values = fit
     netPopulation = orderNetPop(netPopulation)
     layersCreditAssignment(netPopulation)

@@ -25,7 +25,7 @@ layerPopSize = 2**popSizeBits
 # so that most of the layers participate in networks
 netPopSize = 80
 # Number of generations
-nGens = 1
+nGens = 50
 # AE training iterations
 iters = 1000
 

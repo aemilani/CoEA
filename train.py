@@ -1,13 +1,14 @@
 import numpy as np
 import random as rn
 import tensorflow as tf
+import dataset as ds
 from keras import models, layers, regularizers, optimizers
 from keras.callbacks import EarlyStopping
 from keras import backend as K
 import os
 
 # preparing the data
-data_norm = np.genfromtxt('data_norm_200.csv', delimiter=',', dtype=np.float32).T
+data_norm = ds.real_dataset()
 
 # Defining KL Divergence activity regularizer class
 def kl_divergence(rho, rho_hat):

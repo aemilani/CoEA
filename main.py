@@ -13,12 +13,12 @@ net_weights = (1, -1)  # Rho_MK, ValLoss
 
 n_gens = 1  # Number of generations
 
-coea = create_coea.CoEA(pop_size_bits=3,
+coea = create_coea.CoEA(pop_size_bits=6,
                         n_layer_species=4,
                         layer_weights=layer_weights,
                         net_weights=net_weights,
-                        iters=100,
-                        net_pop_size=10)
+                        iters=1000,
+                        net_pop_size=80)
 
 toolbox = coea.toolbox
 net_population = coea.net_population

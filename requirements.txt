@@ -1,9 +1,6 @@
 numpy
-random
 tensorflow
 keras
 deap
 matplotlib
 scipy
-time
-os

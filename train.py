@@ -13,7 +13,7 @@ data_norm = ds.real_dataset()
 
 # Defining KL Divergence activity regularizer class
 def kl_divergence(rho, rho_hat):
-    return abs(rho * tf.log(rho) - rho * tf.log(rho_hat) + \
+    return abs(rho * tf.log(rho) - rho * tf.log(rho_hat) +
                (1 - rho) * tf.log(1 - rho) - (1 - rho) * tf.log(1 - rho_hat))
 
 

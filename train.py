@@ -80,8 +80,8 @@ def auto_encoder(net_params, layer_params_list, n_layers=4, iters=4000):
         hidden_layer = layers.Dense(layer_params['n_neuron'],
                                     activation=layer_params['act'],
                                     kernel_regularizer=regularizers.l2(layer_params['L2']),
-                                    activity_regularizer=SparseActivityRegularizer \
-                                        (p=layer_params['SP'], sparsity_beta=layer_params['SR']),
+                                    activity_regularizer=SparseActivityRegularizer
+                                    (p=layer_params['SP'], sparsity_beta=layer_params['SR']),
                                     kernel_initializer=layer_params['init'])(input_layer)
         output_layer = layers.Dense(input_data.shape[1], activation=layer_params['act'],
                                     kernel_initializer=layer_params['init'])(hidden_layer)

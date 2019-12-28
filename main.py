@@ -11,7 +11,7 @@ start_time = time.time()
 layer_weights = (-1, -1)  # avg, min
 net_weights = (1, -1)  # Rho_MK, ValLoss
 
-n_gens = 1  # Number of generations
+n_gens = 50  # Number of generations
 
 coea = create_coea.CoEA(pop_size_bits=6,
                         n_layer_species=4,

@@ -2,13 +2,9 @@ import os
 import numpy as np
 import random as rn
 import tensorflow as tf
-import dataset as ds
 from keras import backend as K
 from keras import models, layers, regularizers, optimizers
 from keras.callbacks import EarlyStopping
-
-# preparing the data
-data_norm = ds.real_dataset()
 
 
 # Defining KL Divergence activity regularizer class
@@ -32,7 +28,7 @@ class SparseActivityRegularizer(regularizers.Regularizer):
         return {"name": self.__class__.__name__}
 
 
-def auto_encoder(net_params, layer_params_list, n_layers=4, iters=4000):
+def auto_encoder(net_params, layer_params_list, data_norm, n_layers=4, iters=4000):
     """Trains the Autoencoder with the given parameters"""
 
     K.clear_session()

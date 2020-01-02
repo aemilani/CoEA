@@ -29,7 +29,7 @@ def sel_rank_roulette(individuals, k=2):
 
 
 class CoEA:
-    def __init__(self, pop_size_bits, n_layer_species, layer_weights, net_weights, iters, net_pop_size):
+    def __init__(self, pop_size_bits, n_layer_species, layer_weights, net_weights, iters, net_pop_size, data):
         # global random seeds
         # (not to be confused with NN weight initialization random seed)
         np.random.seed(0)
@@ -42,6 +42,7 @@ class CoEA:
         self.iters = iters  # AE training iterations
         self.net_pop_size = net_pop_size
         self.layer_pop_size = 2 ** self.pop_size_bits
+        self.data = data
 
         # number of bits allocated for each layer chromosome gene
         self.layer_gene_bits = {'L2': 8,
@@ -196,7 +197,7 @@ class CoEA:
             layer_params_list.append(layer_params)
         net_ind.net_params = net_params
         net_ind.layer_params = layer_params_list
-        return auto_encoder(net_params, layer_params_list,
+        return auto_encoder(net_params, layer_params_list, self.data,
                             n_layers=self.n_layer_species, iters=self.iters)
 
     def layers_credit_assignment(self, net_pop):

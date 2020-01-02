@@ -4,6 +4,7 @@ import datetime
 import coea
 import numpy as np
 import matplotlib.pyplot as plt
+import dataset as ds
 
 
 start_time = time.time()
@@ -11,14 +12,18 @@ start_time = time.time()
 layer_weights = (-1, -1)  # avg, min
 net_weights = (1, -1)  # Rho_MK, ValLoss
 
-n_gens = 50  # Number of generations
+n_gens = 5  # Number of generations
 
-ca = coea.CoEA(pop_size_bits=6,
+# preparing the data
+data = ds.aramis_dataset_coea()
+
+ca = coea.CoEA(pop_size_bits=3,
                n_layer_species=4,
                layer_weights=layer_weights,
                net_weights=net_weights,
-               iters=1000,
-               net_pop_size=80)
+               iters=100,
+               net_pop_size=10,
+               data=data)
 
 toolbox = ca.toolbox
 net_population = ca.net_population

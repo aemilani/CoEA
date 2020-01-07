@@ -5,6 +5,7 @@ import coea
 import numpy as np
 import matplotlib.pyplot as plt
 import dataset as ds
+import train as tr
 
 
 start_time = time.time()
@@ -12,17 +13,17 @@ start_time = time.time()
 layer_weights = (-1, -1)  # avg, min
 net_weights = (1, -1)  # Rho_MK, ValLoss
 
-n_gens = 5  # Number of generations
+n_gens = 50  # Number of generations
 
 # preparing the data
 data = ds.aramis_dataset_coea()
 
-ca = coea.CoEA(pop_size_bits=3,
+ca = coea.CoEA(pop_size_bits=6,
                n_layer_species=4,
                layer_weights=layer_weights,
                net_weights=net_weights,
-               iters=100,
-               net_pop_size=10,
+               iters=1000,
+               net_pop_size=80,
                data=data)
 
 toolbox = ca.toolbox
@@ -263,3 +264,7 @@ for i in range(len(net_pops) - 1):
             indexes[i][j] = None
 for k in range(ca.net_pop_size):
     indexes[-1][k] = None
+
+
+top_net_ind = net_population[0]
+

@@ -5,7 +5,6 @@ import coea
 import numpy as np
 import matplotlib.pyplot as plt
 import dataset as ds
-import train as tr
 
 
 start_time = time.time()
@@ -264,7 +263,3 @@ for i in range(len(net_pops) - 1):
             indexes[i][j] = None
 for k in range(ca.net_pop_size):
     indexes[-1][k] = None
-
-
-top_net_ind = net_population[0]
-

@@ -1,6 +1,7 @@
 import os
 import numpy as np
-from scipy.integrate import cumtrapz
+import tensorflow as tf
+from scipy.integrate import cumtrapz 
 
 
 def synthetic_dataset():
@@ -31,8 +32,23 @@ def real_dataset():
 
 def aramis_dataset_coea(train_path):
     train_list = os.listdir(train_path)
-    data = np.genfromtxt(os.path.join(train_path, train_list[0]), delimiter=',', dtype=np.float32)[:-1, :]
+    data = np.genfromtxt(os.path.join(train_path, train_list[0]), delimiter=',', dtype=np.float32)[:, :-1]
     _max = np.max(data)
     _min = np.min(data)
-    data = ((data - _min) / (_max - _min)).T
+    data = ((data - _min) / (_max - _min))
     return data[-200:, :]
+
+def aramis_dataset(train_path, test_path, valid_ratio=0.2, batch_size=32):
+    train_files = os.listdir(train_path)
+    test_files = os.listdir(test_path)
+    train_filepaths = []
+    for file in train_files:
+        train_filepaths.append(os.path.join(train_path, file))
+    valid_dataset = tf.data.Dataset.list_files(train_filepaths[:int(valid_ratio*len(train_files))])
+    train_dataset = tf.data.Dataset.list_files(train_filepaths[int(valid_ratio*len(train_files)):])
+    test_filepaths = []
+    for file in test_files:
+        test_filepaths.append(os.path.join(test_path, file))
+    test_dataset = tf.data.Dataset.list_files(test_filepaths)
+    # return batched tuples of data and labels for each
+    return train_dataset, valid_dataset, test_dataset

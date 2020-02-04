@@ -13,7 +13,7 @@ for s in range(np.size(train)):
         data = sys['trajectory'][0, c]
         labels = all_labels[c, :]
         labels = np.expand_dims(labels, axis=0)
-        data_and_labels = np.concatenate((data, labels))
+        data_and_labels = np.concatenate((data.T, labels.T), axis=1)
         np.savetxt('data_csv/sys{}_comp{}.csv'\
                    .format(str(s + 1).zfill(3), (c + 1)),
                    data_and_labels, delimiter=',')

@@ -1,5 +1,9 @@
 # A Coevolutionary Framework for Automatic Extraction of a Health Indicator from Vibrational Data using Sparse Autoencoders
 
+### Installing the requirements:
+  1. $ pip install setuptools --upgrade --ignore-installed
+  2. $ pip install -r --upgrade requirements.txt
+
 ### Using the code:
   1. Open main.py
   2. Set the global random seeds (immediately after the import statements)

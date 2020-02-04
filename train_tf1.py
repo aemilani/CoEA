@@ -2,10 +2,9 @@ import os
 import numpy as np
 import random as rn
 import tensorflow as tf
-from keras import backend as K
-from keras import models, layers, regularizers, optimizers
-from keras.callbacks import EarlyStopping
-from keras.utils import to_categorical
+from tensorflow.keras import backend as K
+from tensorflow.keras import models, layers, regularizers, optimizers
+from tensorflow.keras.callbacks import EarlyStopping
 
 
 # Defining KL Divergence activity regularizer class

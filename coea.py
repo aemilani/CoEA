@@ -2,7 +2,7 @@ import random as rn
 import numpy as np
 import tools as tools_modified
 from deap import base, creator, tools
-from train import auto_encoder
+from train_tf2 import auto_encoder
 
 
 def rand_bin():

@@ -90,4 +90,18 @@ def aramis_dataset(train_path='aramis_dataset/train/data_csv',
             _min = np.min(features)
             _max = np.max(features)
         return (features - _min) / (_max - _min)
+    train_sample = list(train_dataset.shuffle(
+            int(len(train_filepaths)*(1-valid_ratio))).map(lambda x, y: x).take(1000))
+    valid_sample = list(valid_dataset.shuffle(
+            int(len(train_filepaths)*valid_ratio)).map(lambda x, y: x).take(1000))
+    test_sample = list(test_dataset.shuffle(len(test_filepaths)).take(1000))
+    train_dataset = train_dataset.map(lambda x, y: (normalize(x, train_sample), y))
+    valid_dataset = valid_dataset.map(lambda x, y: (normalize(x, valid_sample), y))
+    test_dataset = test_dataset.map(lambda x: normalize(x, test_sample))
     return train_dataset, valid_dataset, test_dataset
+
+@tf.function
+def normalize(data, sample):
+    _min = tf.math.reduce_min(sample)
+    _max = tf.math.reduce_max(sample)
+    return (data - _min) / (_max - _min)

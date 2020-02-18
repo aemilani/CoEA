@@ -12,4 +12,4 @@ for s in range(np.size(test)):
         data = sys['trajectory'][0,c]
         np.savetxt('data_csv/sys{}_comp{}.csv'\
                    .format(str(s + 1).zfill(2), (c + 1)),
-                   data, delimiter=',')
+                   data.T, delimiter=',')

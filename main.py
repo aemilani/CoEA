@@ -12,17 +12,17 @@ start_time = time.time()
 layer_weights = (-1, -1)  # avg, min
 net_weights = (1, -1)  # Rho_MK, ValLoss
 
-n_gens = 1  # Number of generations
+n_gens = 50  # Number of generations
 
 # preparing the data
-data = ds.synthetic_dataset()
+data = ds.aramis_dataset(coea_dataset=True)
 
-ca = coea.CoEA(pop_size_bits=3,
+ca = coea.CoEA(pop_size_bits=6,
                n_layer_species=4,
                layer_weights=layer_weights,
                net_weights=net_weights,
-               iters=1000,
-               net_pop_size=10,
+               iters=2000,
+               net_pop_size=80,
                data=data)
 
 toolbox = ca.toolbox
@@ -240,26 +240,27 @@ for i, pop in enumerate(net_pops):
     plt.scatter(xs, ys)
     plt.xlabel('Rho_MK')
     plt.ylabel('val_loss')
-    plt.title('Generation {} front'.format(i))
+    plt.title('Generation {} population'.format(i))
     plt.savefig(dirr + '/pops/' + 'Generation_{}_population.png'.format(i))
 
 
 # hash codes of strings of chromosomes
-net_pop_ids = []
-for pop in net_pops:
-    lis = []
-    for ind in pop:
-        lis.append(hash(str(ind)))
-    net_pop_ids.append(lis)
+#net_pop_ids = []
+#for pop in net_pops:
+#    lis = []
+#    for ind in pop:
+#        lis.append(hash(str(ind)))
+#    net_pop_ids.append(lis)
 
 # index of each chromosome of each generation population in the next generation population
-indexes = toolbox.clone(net_pop_ids)
-for i in range(len(net_pops) - 1):
-    for j in range(ca.net_pop_size):
-        _ = np.equal(net_pop_ids[i][j], net_pop_ids[i + 1])
-        if bool(np.isin(True, _)):
-            indexes[i][j] = list(_).index(True)
-        else:
-            indexes[i][j] = None
-for k in range(ca.net_pop_size):
-    indexes[-1][k] = None
+#indexes = toolbox.clone(net_pop_ids)
+#for i in range(len(net_pops) - 1):
+#    for j in range(ca.net_pop_size):
+#        _ = np.equal(net_pop_ids[i][j], net_pop_ids[i + 1])
+#        if bool(np.isin(True, _)):
+#            indexes[i][j] = list(_).index(True)
+#        else:
+#            indexes[i][j] = None
+#for k in range(ca.net_pop_size):
+#    indexes[-1][k] = None
+

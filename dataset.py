@@ -45,7 +45,7 @@ def real_dataset():
 
 def aramis_dataset(train_path='aramis_dataset/train/data_csv',
                    test_path='aramis_dataset/test/data_csv',
-                   valid_ratio=0.2, batch_size=32,
+                   valid_ratio=0.25, batch_size=None,
                    shuffle=False, coea_dataset=False):
     train_files = os.listdir(train_path)
     test_files = os.listdir(test_path)
@@ -71,9 +71,10 @@ def aramis_dataset(train_path='aramis_dataset/train/data_csv',
         valid_dataset = valid_dataset.shuffle(
                 int(len(train_files) * valid_ratio))
         test_dataset = test_dataset.shuffle(len(test_files))
-    train_dataset = train_dataset.batch(batch_size)
-    valid_dataset = valid_dataset.batch(batch_size)
-    test_dataset = test_dataset.batch(batch_size)
+    if batch_size:
+        train_dataset = train_dataset.batch(batch_size)
+        valid_dataset = valid_dataset.batch(batch_size)
+        test_dataset = test_dataset.batch(batch_size)
     if coea_dataset:
         degraded = False
         while not degraded:
@@ -98,6 +99,10 @@ def aramis_dataset(train_path='aramis_dataset/train/data_csv',
     train_dataset = train_dataset.map(lambda x, y: (normalize(x, train_sample), y))
     valid_dataset = valid_dataset.map(lambda x, y: (normalize(x, valid_sample), y))
     test_dataset = test_dataset.map(lambda x: normalize(x, test_sample))
+    # on average 1000 timestamps per csv file
+    train_dataset.size = int((1 - valid_ratio) * len(train_files)) * 1000
+    valid_dataset.size = int(valid_ratio*len(train_files)) * 1000
+    test_dataset.size = len(test_files) * 1000
     return train_dataset, valid_dataset, test_dataset
 
 @tf.function

@@ -4,7 +4,7 @@ import random as rn
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras import models, layers, regularizers, optimizers
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 
 # Defining KL Divergence activity regularizer class
@@ -157,7 +157,7 @@ def auto_encoder(net_params, layer_params_list, data_norm, n_layers=4, iters=400
     return max_rho_mk, loss
 
 
-def train_ae(net_params, layer_params_list, train_data, n_layers=4, iters=4000):
+def train_ae(net_params, layer_params_list, train_data, valid_data, n_layers=4):
     """Trains an AE with the given parameters. Returns the trained AE."""
 
     K.clear_session()
@@ -171,7 +171,6 @@ def train_ae(net_params, layer_params_list, train_data, n_layers=4, iters=4000):
     tf.compat.v1.keras.backend.set_session(sess)
 
     # network parameters
-    batch = net_params['batch']
     optim = net_params['optim']
     learn_rate = net_params['learn_rate']
     decay = net_params['decay']
@@ -181,9 +180,6 @@ def train_ae(net_params, layer_params_list, train_data, n_layers=4, iters=4000):
     np.random.seed(rand_seed)
     rn.seed(rand_seed)
     tf.compat.v1.set_random_seed(rand_seed)
-
-    iter_per_epoch = int(np.ceil(len(train_data) / batch))
-    epochs = int(np.ceil(iters / iter_per_epoch))
 
     if optim == 'adam':
         opt = optimizers.Adam(lr=learn_rate, beta_1=mom, decay=decay, clipvalue=0.3)
@@ -197,25 +193,25 @@ def train_ae(net_params, layer_params_list, train_data, n_layers=4, iters=4000):
     # pretraining
     input_data = train_data
     weights = []
-    ea = EarlyStopping(patience=int(epochs / 3))
-    cb = [ea]
+    ea = EarlyStopping(patience=5)
+    cp = ModelCheckpoint('checkpoint.hdf5', save_best_only=True)
+    cb = [ea, cp]
     for i, layer_params in enumerate(layer_params_list):
         layer_params = layer_params_list[n_layers - 1 - i]
-        input_layer = layers.Input(shape=(input_data.shape[1],))
+        input_layer = layers.Input(shape=(10,))
         hidden_layer = layers.Dense(layer_params['n_neuron'],
                                     activation=layer_params['act'],
                                     kernel_regularizer=regularizers.l2(layer_params['L2']),
                                     activity_regularizer=SparseActivityRegularizer
                                     (p=layer_params['SP'], sparsity_beta=layer_params['SR']),
                                     kernel_initializer=layer_params['init'])(input_layer)
-        output_layer = layers.Dense(input_data.shape[1], activation=layer_params['act'],
+        output_layer = layers.Dense(10,
+                                    activation=layer_params['act'],
                                     kernel_initializer=layer_params['init'])(hidden_layer)
         model = models.Model(input_layer, output_layer)
         model.compile(optimizer=opt, loss='mse')
-        model.fit(x=input_data, y=input_data, batch_size=batch,
-                  epochs=epochs,
-                  callbacks=cb, validation_split=0.2,
-                  verbose=False)
+        model.fit_generator(train_data, epochs=50,
+                  callbacks=cb, validation_data=valid_data)
         h_weights = model.get_weights()
         weights.insert(2 * i, h_weights[0])
         weights.insert(2 * i + 1, h_weights[1])
@@ -225,7 +221,7 @@ def train_ae(net_params, layer_params_list, train_data, n_layers=4, iters=4000):
         input_data = model.predict(input_data)
 
     # stacking the layers - Fine tuning
-    input_layer = layers.Input(shape=(train_data.shape[1],))
+    input_layer = layers.Input(shape=(10,))
     enc = layers.Dense(layer_params_list[-1]['n_neuron'],
                        activation=layer_params_list[-1]['act'],
                        kernel_initializer=layer_params_list[-1]['init'])(input_layer)
@@ -240,19 +236,13 @@ def train_ae(net_params, layer_params_list, train_data, n_layers=4, iters=4000):
         dec = layers.Dense(layer_params_list[i + 2]['n_neuron'],
                            activation=layer_params_list[i + 2]['act'],
                            kernel_initializer=layer_params_list[i + 2]['init'])(dec)
-    output_layer = layers.Dense(len(train_data.T),
+    output_layer = layers.Dense(10,
                                 activation=layer_params_list[-1]['act'],
                                 kernel_initializer=layer_params_list[-1]['init'])(dec)
     # assumption: output layer has the same parameters as the final hidden layer
     ae = models.Model(input_layer, output_layer)
     ae.compile(optimizer=opt, loss='mse')
     ae.set_weights(weights)
-    ae.fit(x=train_data, y=train_data, batch_size=batch,
-           epochs=epochs,
-           callbacks=cb, validation_split=0.2,
-           verbose=False)
+    ae.fit_generator(train_data, epochs=100,
+                  callbacks=cb, validation_data=valid_data)
     return ae
-
-
-def aramis_classification():
-    pass

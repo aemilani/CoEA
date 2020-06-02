@@ -8,6 +8,8 @@ import dataset as ds
 import train_tf2 as tr
 
 
+np.random.seed(0)
+
 start_time = time.time()
 
 layer_weights = (-1, -1)  # avg, min
@@ -16,7 +18,17 @@ net_weights = (1, -1)  # Rho_MK, ValLoss
 n_gens = 5  # Number of generations
 
 # preparing the data
-data = ds.aramis_dataset(coea_dataset=True)
+train_files, test_files, min_value, max_value, elbow_points, lens = ds.aramis_dataset()
+coea_train_idx = np.random.randint(0, len(train_files))
+while (lens[coea_train_idx] - elbow_points[coea_train_idx]) >= 200:
+    coea_train_idx = np.random.randint(0, len(train_files))
+coea_eval_idx = np.random.randint(0, len(train_files))
+while (coea_train_idx == coea_eval_idx) or ((lens[coea_eval_idx] - elbow_points[coea_eval_idx]) >= 200):
+    coea_eval_idx = np.random.randint(0, len(train_files))
+data_train = np.genfromtxt(train_files[coea_train_idx], dtype=np.float32, delimiter=',')[-200:, :-1]
+data_eval = np.genfromtxt(train_files[coea_eval_idx], dtype=np.float32, delimiter=',')[-200:, :-1]
+data_train = ds.normalize(data_train, min_value, max_value)
+data_eval = ds.normalize(data_eval, min_value, max_value)
 
 ca = coea.CoEA(pop_size_bits=3,
                n_layer_species=4,
@@ -24,7 +36,8 @@ ca = coea.CoEA(pop_size_bits=3,
                net_weights=net_weights,
                iters=2000,
                net_pop_size=12,
-               data=data)
+               data_train=data_train,
+               data_eval=data_eval)
 
 toolbox = ca.toolbox
 net_population = ca.net_population
@@ -203,7 +216,6 @@ end_time = time.time()
 run_time = end_time - start_time
 print('\nTotal run time is:', run_time / 3600, 'hours')
 
-
 date = str(datetime.date.today())
 time = str(datetime.datetime.now().time())[:8].replace(':', '-')
 dirr = 'results/{}/{}'.format(date, time)
@@ -232,17 +244,17 @@ for i in range(ca.n_layer_species):
     plt.title('Average "Min" Fitness of the Layer Species nr. {} Per Generation'.format(i))
     plt.savefig(dirr + '/' + 'Average_Min_Fitness_of_the_Layer_Species_nr_{}_Per_Generation.png'.format(i))
 
-for i, pop in enumerate(net_pops):
-    xs, ys = [], []
-    for ind in pop:
-        xs.append(ind.fitness.values[0])
-        ys.append(ind.fitness.values[1])
-    plt.figure()
-    plt.scatter(xs, ys)
-    plt.xlabel('Rho_MK')
-    plt.ylabel('val_loss')
-    plt.title('Generation {} population'.format(i))
-    plt.savefig(dirr + '/pops/' + 'Generation_{}_population.png'.format(i))
+# for i, pop in enumerate(net_pops):
+#     xs, ys = [], []
+#     for ind in pop:
+#         xs.append(ind.fitness.values[0])
+#         ys.append(ind.fitness.values[1])
+#     plt.figure()
+#     plt.scatter(xs, ys)
+#     plt.xlabel('Rho_MK')
+#     plt.ylabel('val_loss')
+#     plt.title('Generation {} population'.format(i))
+#     plt.savefig(dirr + '/pops/' + 'Generation_{}_population.png'.format(i))
 
 
 # hash codes of strings of chromosomes
@@ -264,24 +276,23 @@ for i, pop in enumerate(net_pops):
 #            indexes[i][j] = None
 #for k in range(ca.net_pop_size):
 #    indexes[-1][k] = None
-#%%
-final_pop = net_pops[-1]
-for i in range(len(final_pop) - 1):
-    if final_pop[i+1].fitness.values[1] > final_pop[i].fitness.values[1]:
-        break
-pareto_front = final_pop[:i+1]
 
-#%%
-train_dataset, test_dataset, final_test_dataset = ds.aramis_dataset()
 
-#%%
-aes = []
-for ind in pareto_front:
-    val_size = int(train_dataset.size / 3)
-    train_data = train_dataset.skip(val_size).batch(ind.net_params['batch'])
-    valid_data = train_dataset.take(val_size).batch(ind.net_params['batch'])
-    ae = tr.train_ae(net_params=ind.net_params,
-                     layer_params_list=ind.layer_params,
-                     train_data=train_data,
-                     valid_data=valid_data)
-    aes.append(ae)
+# final_pop = net_pops[-1]
+# for i in range(len(final_pop) - 1):
+#     if final_pop[i+1].fitness.values[1] > final_pop[i].fitness.values[1]:
+#         break
+#     pareto_front = final_pop[:i+1]
+#
+# train_dataset, test_dataset, final_test_dataset = ds.aramis_dataset()
+#
+# aes = []
+# for ind in pareto_front:
+#     val_size = int(train_dataset.size / 3)
+#     train_data = train_dataset.skip(val_size).batch(32)
+#     valid_data = train_dataset.take(val_size).batch(32)
+#     ae = tr.train_ae(net_params=ind.net_params,
+#                      layer_params_list=ind.layer_params,
+#                      train_data=train_data,
+#                      valid_data=valid_data)
+#     aes.append(ae)

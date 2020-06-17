@@ -2,7 +2,7 @@ import random as rn
 import numpy as np
 import tools as tools_modified
 from deap import base, creator, tools
-from train_tf2 import auto_encoder
+from train import train_ae_coea
 
 
 def rand_bin():
@@ -115,7 +115,7 @@ class CoEA:
         self.layer_ind_size = sum(self.layer_gene_bits.values())
         self.net_ind_size = sum(self.net_gene_bits.values())
 
-        # position of the first layer gene in net ind
+        # position of the first layer gene in net weights
         self.pos = len(self.net_gene_bits) - n_layer_species
 
         self.toolbox = base.Toolbox()
@@ -199,14 +199,14 @@ class CoEA:
             layer_params_list.append(layer_params)
         net_ind.net_params = net_params
         net_ind.layer_params = layer_params_list
-        return auto_encoder(net_params, layer_params_list, self.data_train, self.data_eval,
-                            n_layers=self.n_layer_species, iters=self.iters, ind=net_ind)
+        return train_ae_coea(net_params, layer_params_list, self.data_train, self.data_eval,
+                             n_layers=self.n_layer_species, iters=self.iters, ind=net_ind)
 
     def layers_credit_assignment(self, net_pop):
         """Assigns credits to layer population individuals"""
         layer_fitnesses = []
         # includes 4 lists, each with layer_pop_size lists. Index here corresponds
-        # to index for each ind in layer population, not its order.
+        # to index for each weights in layer population, not its order.
         for i in range(self.n_layer_species):
             layer_species = []
             for j in range(self.layer_pop_size):
@@ -293,7 +293,7 @@ class CoEA:
             layer_ind[mut_bit] = int(not layer_ind[mut_bit])
 
     def order_net_pop(self, net_pop):
-        """Order network population first based of NSGA, and then each front based of Rho_MK"""
+        """Order network population first based on NSGA, and then each front based on Rho_MK"""
         fronts = self.toolbox.selectNSGA2fronts(net_pop, k=self.net_pop_size)
         for i in range(len(fronts)):
             fronts[i].sort(key=lambda x: x.fitness.values[0], reverse=True)

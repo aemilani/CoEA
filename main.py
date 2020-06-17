@@ -1,50 +1,72 @@
 import os
-import time
 import datetime
+import pickle
 import coea
+import train
 import numpy as np
 import matplotlib.pyplot as plt
 import dataset as ds
-import train_tf2 as tr
+from utils import setup_logger
 
 
-np.random.seed(0)
+date = str(datetime.date.today())
+time = str(datetime.datetime.now().time())[:8].replace(':', '-')
+dirr = 'results/{}/{}'.format(date, time)
 
-start_time = time.time()
+os.makedirs(dirr + '/saves')
+os.mkdir(dirr + '/logs')
+
+logger_main = setup_logger(logger_name='main', log_path=dirr + '/logs')
+logger_ae = setup_logger(logger_name='AE', log_path=dirr + '/logs')
+logger_classifier = setup_logger(logger_name='Classifier', log_path=dirr + '/logs')
 
 layer_weights = (-1, -1)  # avg, min
 net_weights = (1, -1)  # Rho_MK, ValLoss
 
-n_gens = 5  # Number of generations
+n_gens = 3  # Number of generations
 
-# preparing the data
-train_files, test_files, min_value, max_value, elbow_points, lens = ds.aramis_dataset()
+logger_main.info('Loading the dataset...')
+train_files, test_files, min_value, max_value, train_elbow_points, mission_times = ds.aramis_dataset()
+logger_main.info('Dataset loaded successfully.')
+
+# preparing the CoEA data
+np.random.seed(0)
 coea_train_idx = np.random.randint(0, len(train_files))
-while (lens[coea_train_idx] - elbow_points[coea_train_idx]) >= 200:
+# The last 200 timestamps should include the elbow point
+while (mission_times[coea_train_idx] - train_elbow_points[coea_train_idx]) >= 200:
     coea_train_idx = np.random.randint(0, len(train_files))
 coea_eval_idx = np.random.randint(0, len(train_files))
-while (coea_train_idx == coea_eval_idx) or ((lens[coea_eval_idx] - elbow_points[coea_eval_idx]) >= 200):
+while (coea_train_idx == coea_eval_idx) or ((mission_times[coea_eval_idx] - train_elbow_points[coea_eval_idx]) >= 200):
     coea_eval_idx = np.random.randint(0, len(train_files))
-data_train = np.genfromtxt(train_files[coea_train_idx], dtype=np.float32, delimiter=',')[-200:, :-1]
-data_eval = np.genfromtxt(train_files[coea_eval_idx], dtype=np.float32, delimiter=',')[-200:, :-1]
+
+logger_main.debug('The file used for CoEA training: {}'.format(train_files[coea_train_idx]))
+logger_main.debug('The file used for CoEA evaluation: {}'.format(train_files[coea_eval_idx]))
+
+data_train = np.genfromtxt(train_files[coea_train_idx], dtype=np.float32, delimiter=',')[:, :-1]
+data_eval = np.genfromtxt(train_files[coea_eval_idx], dtype=np.float32, delimiter=',')[:, :-1]
 data_train = ds.normalize(data_train, min_value, max_value)
 data_eval = ds.normalize(data_eval, min_value, max_value)
 
-ca = coea.CoEA(pop_size_bits=3,
+coea_start_time = datetime.datetime.now()
+
+ca = coea.CoEA(pop_size_bits=2,
                n_layer_species=4,
                layer_weights=layer_weights,
                net_weights=net_weights,
-               iters=2000,
-               net_pop_size=12,
+               iters=1000,
+               net_pop_size=6,
                data_train=data_train,
                data_eval=data_eval)
+
+logger_main.info('The CoEA initialized with network population size of {}, layer population size of {}, and using '
+                 '{} iterations for training the AE.'.format(ca.net_pop_size, (2 ** ca.pop_size_bits), ca.iters))
 
 toolbox = ca.toolbox
 net_population = ca.net_population
 layer_population = ca.layer_population
 
+logger_main.info('Evaluating initial network population...')
 
-print('\nEvaluating Initial Population...\n')
 # evaluate initial network population
 fits = toolbox.map(toolbox.evaluateNet, net_population)
 for fit, ind in zip(fits, net_population):
@@ -55,9 +77,9 @@ ca.layers_credit_assignment(net_population)
 # order layers population
 for i in range(len(layer_population)):
     layer_population[i] = toolbox.selectNSGA2(layer_population[i], k=ca.layer_pop_size)
-print('\nInitial Population Fitness Values:\n')
+logger_main.info('Initial Population Fitness Values:')
 for ind in net_population:
-    print(ind.fitness.values)
+    logger_main.info(str(ind.fitness.values))
 
 # for saving populations and fitnesses
 avg_layer_fits, avg_net_rho, min_layer_fits, max_net_rho = [], [], [], []
@@ -89,9 +111,7 @@ max_net_rho.append(np.max(rhos))
 
 
 for gen in range(n_gens):
-    print('\nGeneration: ', gen + 1)
-    elapsed_time = time.time() - start_time
-    print('Elapsed Time: ', elapsed_time / 60, ' minutes\n')
+    logger_main.info('CoEA generation {} starting...'.format(gen + 1))
     # network population evolution
     # structural and parametric mutation of diverged networks
     for ind in net_population:
@@ -207,34 +227,29 @@ for gen in range(n_gens):
     pop = toolbox.clone(net_population)
     net_pops.append(pop)
     del pop
-    # printing network population fitnesses
+    logger_main.info('CoEA generation {} ended. Fitness values:'.format(gen + 1))
     for ind in net_population:
-        print(ind.fitness.values)
+        logger_main.info(str(ind.fitness.values))
+    elapsed_time = datetime.datetime.now() - coea_start_time
+    logger_main.info('Elapsed time: {}'.format(elapsed_time))
 
 
-end_time = time.time()
-run_time = end_time - start_time
-print('\nTotal run time is:', run_time / 3600, 'hours')
-
-date = str(datetime.date.today())
-time = str(datetime.datetime.now().time())[:8].replace(':', '-')
-dirr = 'results/{}/{}'.format(date, time)
-
-os.makedirs(dirr + '/pops')
+coea_run_time = datetime.datetime.now() - coea_start_time
+logger_main.info('CoEA ended. Running duration: {}'.format(coea_run_time))
 
 plt.figure()
 plt.plot(max_net_rho)
 plt.xlabel('Generations')
 plt.ylabel('Rho_MK')
 plt.title('Max Rho_MK per generation')
-plt.savefig(dirr + '/' + 'Max_Rho_MK_per_generation.png')
+plt.savefig(dirr + '/Max_Rho_MK_per_generation.png')
 
 plt.figure()
 plt.plot(avg_net_rho)
 plt.xlabel('Generations')
 plt.ylabel('Rho_MK')
 plt.title('Average Rho_MK per generation')
-plt.savefig(dirr + '/' + 'Average_Rho_MK_per_generation.png')
+plt.savefig(dirr + '/Average_Rho_MK_per_generation.png')
 
 for i in range(ca.n_layer_species):
     plt.figure()
@@ -244,55 +259,82 @@ for i in range(ca.n_layer_species):
     plt.title('Average "Min" Fitness of the Layer Species nr. {} Per Generation'.format(i))
     plt.savefig(dirr + '/' + 'Average_Min_Fitness_of_the_Layer_Species_nr_{}_Per_Generation.png'.format(i))
 
-# for i, pop in enumerate(net_pops):
-#     xs, ys = [], []
-#     for ind in pop:
-#         xs.append(ind.fitness.values[0])
-#         ys.append(ind.fitness.values[1])
-#     plt.figure()
-#     plt.scatter(xs, ys)
-#     plt.xlabel('Rho_MK')
-#     plt.ylabel('val_loss')
-#     plt.title('Generation {} population'.format(i))
-#     plt.savefig(dirr + '/pops/' + 'Generation_{}_population.png'.format(i))
+
+final_pop = net_pops[-1]
+
+for i, ae in enumerate(final_pop):
+    pickle.dump(ae, open(dirr + '/saves/ae_{}.p'.format(i), 'wb'))
 
 
-# hash codes of strings of chromosomes
-#net_pop_ids = []
-#for pop in net_pops:
-#    lis = []
-#    for ind in pop:
-#        lis.append(hash(str(ind)))
-#    net_pop_ids.append(lis)
-
-# index of each chromosome of each generation population in the next generation population
-#indexes = toolbox.clone(net_pop_ids)
-#for i in range(len(net_pops) - 1):
-#    for j in range(ca.net_pop_size):
-#        _ = np.equal(net_pop_ids[i][j], net_pop_ids[i + 1])
-#        if bool(np.isin(True, _)):
-#            indexes[i][j] = list(_).index(True)
-#        else:
-#            indexes[i][j] = None
-#for k in range(ca.net_pop_size):
-#    indexes[-1][k] = None
+first_front = toolbox.selectNSGA2fronts(final_pop, k=ca.net_pop_size)[0]
 
 
-# final_pop = net_pops[-1]
-# for i in range(len(final_pop) - 1):
-#     if final_pop[i+1].fitness.values[1] > final_pop[i].fitness.values[1]:
-#         break
-#     pareto_front = final_pop[:i+1]
-#
-# train_dataset, test_dataset, final_test_dataset = ds.aramis_dataset()
-#
-# aes = []
-# for ind in pareto_front:
-#     val_size = int(train_dataset.size / 3)
-#     train_data = train_dataset.skip(val_size).batch(32)
-#     valid_data = train_dataset.take(val_size).batch(32)
-#     ae = tr.train_ae(net_params=ind.net_params,
-#                      layer_params_list=ind.layer_params,
-#                      train_data=train_data,
-#                      valid_data=valid_data)
-#     aes.append(ae)
+# Classification
+np.random.seed(7)
+np.random.shuffle(train_files)
+valid_split = 0.25
+valid_files = train_files[:int(valid_split * len(train_files))]
+train_files = train_files[int(valid_split * len(train_files)):]
+
+ind = first_front[0]
+
+logger_main.info('Starting the AE training...')
+ae_start_time = datetime.datetime.now()
+ae, ae_training_history = train.train_ae(ind.net_params, ind.layer_params, train_files, valid_files,
+                                         min_value, max_value, n_layers=4, weights=ind.final_weights,
+                                         logger=logger_ae)
+ae_run_time = datetime.datetime.now() - ae_start_time
+logger_main.info('Training the AE ended. Duration: {}'.format(ae_run_time))
+
+ae.save(dirr + '/saves/trained_ae.h5')
+
+plt.figure()
+plt.plot(ae_training_history['loss'], label='Training Loss')
+plt.plot(ae_training_history['val_loss'], label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('AE Training')
+plt.savefig(dirr + '/AE_training.png')
+
+logger_main.info('Starting the classifier training...')
+classification_start_time = datetime.datetime.now()
+classifier, classifier_training_history = train.classify(ae, train_files, valid_files, min_value, max_value,
+                                                         logger=logger_classifier)
+classification_run_time = datetime.datetime.now() - classification_start_time
+logger_main.info('Training the classifier ended. Duration: {}'.format(classification_run_time))
+
+classifier.save(dirr + '/saves/trained_classifier.h5')
+
+total_run_time = coea_run_time + ae_run_time + classification_run_time
+logger_main.info('Total run time: {}'.format(total_run_time))
+
+plt.figure()
+plt.plot(classifier_training_history['loss'], label='Training Loss')
+plt.plot(classifier_training_history['val_loss'], label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Classifier Training - Loss')
+plt.savefig(dirr + '/Classifier_training_loss.png')
+
+plt.figure()
+plt.plot(classifier_training_history['accuracy'], label='Training Accuracy')
+plt.plot(classifier_training_history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.title('Classifier Training - Accuracy')
+plt.savefig(dirr + '/Classifier_training_accuracy.png')
+
+plt.figure()
+plt.plot(classifier_training_history['aramis_metric'], label='Training Average Error')
+plt.plot(classifier_training_history['val_aramis_metric'], label='Validation Average Error')
+plt.xlabel('Epochs')
+plt.ylabel('Average Error')
+plt.legend()
+plt.title('Classifier Training - Aramis Metric')
+plt.savefig(dirr + '/Classifier_training_metric.png')
+plt.show()
+
+# predicted test labels

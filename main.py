@@ -2,7 +2,7 @@ import os
 import datetime
 import pickle
 import coea
-import train
+import train as tr
 import numpy as np
 import matplotlib.pyplot as plt
 import dataset as ds
@@ -23,20 +23,17 @@ logger_classifier = setup_logger(logger_name='Classifier', log_path=dirr + '/log
 layer_weights = (-1, -1)  # avg, min
 net_weights = (1, -1)  # Rho_MK, ValLoss
 
-n_gens = 3  # Number of generations
+n_gens = 50  # Number of generations
 
 logger_main.info('Loading the dataset...')
-train_files, test_files, min_value, max_value, train_elbow_points, mission_times = ds.aramis_dataset()
+train_files, test_files, min_value, max_value = ds.aramis_dataset()
 logger_main.info('Dataset loaded successfully.')
 
 # preparing the CoEA data
 np.random.seed(0)
 coea_train_idx = np.random.randint(0, len(train_files))
-# The last 200 timestamps should include the elbow point
-while (mission_times[coea_train_idx] - train_elbow_points[coea_train_idx]) >= 200:
-    coea_train_idx = np.random.randint(0, len(train_files))
 coea_eval_idx = np.random.randint(0, len(train_files))
-while (coea_train_idx == coea_eval_idx) or ((mission_times[coea_eval_idx] - train_elbow_points[coea_eval_idx]) >= 200):
+while coea_train_idx == coea_eval_idx:  # Training and evaluation data should not be the same.
     coea_eval_idx = np.random.randint(0, len(train_files))
 
 logger_main.debug('The file used for CoEA training: {}'.format(train_files[coea_train_idx]))
@@ -49,17 +46,17 @@ data_eval = ds.normalize(data_eval, min_value, max_value)
 
 coea_start_time = datetime.datetime.now()
 
-ca = coea.CoEA(pop_size_bits=2,
+ca = coea.CoEA(pop_size_bits=6,
                n_layer_species=4,
                layer_weights=layer_weights,
                net_weights=net_weights,
-               iters=1000,
-               net_pop_size=6,
+               iters=5000,
+               net_pop_size=80,
                data_train=data_train,
                data_eval=data_eval)
 
 logger_main.info('The CoEA initialized with network population size of {}, layer population size of {}, and using '
-                 '{} iterations for training the AE.'.format(ca.net_pop_size, (2 ** ca.pop_size_bits), ca.iters))
+                 '{} iterations for training the AEs.'.format(ca.net_pop_size, (2 ** ca.pop_size_bits), ca.iters))
 
 toolbox = ca.toolbox
 net_population = ca.net_population
@@ -280,9 +277,8 @@ ind = first_front[0]
 
 logger_main.info('Starting the AE training...')
 ae_start_time = datetime.datetime.now()
-ae, ae_training_history = train.train_ae(ind.net_params, ind.layer_params, train_files, valid_files,
-                                         min_value, max_value, n_layers=4, weights=ind.final_weights,
-                                         logger=logger_ae)
+ae, ae_training_history = tr.train_ae(ind.net_params, ind.layer_params, train_files, valid_files,
+                                      min_value, max_value, weights=ind.final_weights, logger=logger_ae)
 ae_run_time = datetime.datetime.now() - ae_start_time
 logger_main.info('Training the AE ended. Duration: {}'.format(ae_run_time))
 
@@ -299,8 +295,8 @@ plt.savefig(dirr + '/AE_training.png')
 
 logger_main.info('Starting the classifier training...')
 classification_start_time = datetime.datetime.now()
-classifier, classifier_training_history = train.classify(ae, train_files, valid_files, min_value, max_value,
-                                                         logger=logger_classifier)
+classifier, classifier_training_history = tr.classify(ae, train_files, valid_files, min_value, max_value,
+                                                      logger=logger_classifier)
 classification_run_time = datetime.datetime.now() - classification_start_time
 logger_main.info('Training the classifier ended. Duration: {}'.format(classification_run_time))
 
@@ -337,4 +333,5 @@ plt.title('Classifier Training - Aramis Metric')
 plt.savefig(dirr + '/Classifier_training_metric.png')
 plt.show()
 
-# predicted test labels
+
+predicted_test_labels = tr.predict(classifier, test_files)

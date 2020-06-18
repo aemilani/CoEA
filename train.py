@@ -105,7 +105,7 @@ def train_ae_coea(net_params, layer_params_list, data_train, data_eval, n_layers
         model = models.Model(input_layer, hidden_layer)
         input_data = model.predict(input_data)
 
-    # stacking the layers - Fine tuning
+    # stacking the layers - fine tuning
     input_layer = layers.Input(shape=(data_train.shape[1],))
     enc = layers.Dense(layer_params_list[-1]['n_neuron'],
                        activation=layer_params_list[-1]['act'],
@@ -225,7 +225,7 @@ def train_ae(net_params, layer_params_list, train_files, valid_files, min_value,
 
     early_stop_counter = 0
 
-    for epoch in range(1, 6):
+    for epoch in range(1, 201):
         logger.info('AE epoch {} starting...'.format(epoch))
         if epoch % 10 == 0:
             ae.save('checkpoints/ae_checkpoint.h5')
@@ -252,7 +252,7 @@ def train_ae(net_params, layer_params_list, train_files, valid_files, min_value,
             avg = np.average(training_history[key][-len(train_files):])
             del training_history[key][-len(train_files):]
             training_history[key].append(avg)
-        if epoch > 3:
+        if epoch > 20:
             if not training_history['val_loss'][-1] < training_history['val_loss'][-2]:
                 early_stop_counter += 1
                 logger.debug('Early stopping counter increased by 1.')
@@ -260,7 +260,7 @@ def train_ae(net_params, layer_params_list, train_files, valid_files, min_value,
                 if early_stop_counter > 0:
                     early_stop_counter = 0
                     logger.debug('Early stopping counter reset to 0.')
-        if early_stop_counter > 3:
+        if early_stop_counter > 10:
             logger.debug('Training terminated by early stopping.')
             break
 
@@ -305,7 +305,7 @@ def classify(ae, train_files, valid_files, min_value, max_value, logger):
 
     early_stop_counter = 0
 
-    for epoch in range(1, 6):
+    for epoch in range(1, 201):
         logger.info('Classifier epoch {} starting...'.format(epoch))
         true_labels_train, predicted_labels_train = [], []
         true_labels_valid, predicted_labels_valid = [], []
@@ -318,14 +318,15 @@ def classify(ae, train_files, valid_files, min_value, max_value, logger):
             logger.debug('Training file: {}'.format(train_file))
             logger.debug('Validation file: {}'.format(valid_file))
             data_train = np.genfromtxt(train_file, dtype=np.float32, delimiter=',')
+            data_train = ds.balanced_sample(data_train)
             data_valid = np.genfromtxt(valid_file, dtype=np.float32, delimiter=',')
-            features_train = data_train[-200:, :-1]
-            features_valid = data_valid[-200:, :-1]
+            features_train = data_train[:, :-1]
+            features_valid = data_valid[:, :-1]
             features_train = ds.normalize(features_train, min_value, max_value)
             features_valid = ds.normalize(features_valid, min_value, max_value)
-            labels_train = data_train[-200:, -1]
+            labels_train = data_train[:, -1]
             labels_train = to_categorical(labels_train, num_classes=2)
-            labels_valid = data_valid[-200:, -1]
+            labels_valid = data_valid[:, -1]
             labels_valid = to_categorical(labels_valid, num_classes=2)
 
             history = classifier.fit(x=features_train, y=labels_train, batch_size=32, epochs=1,
@@ -350,7 +351,7 @@ def classify(ae, train_files, valid_files, min_value, max_value, logger):
             avg = np.average(training_history[key][-len(train_files):])  # average of each epoch
             del training_history[key][-len(train_files):]
             training_history[key].append(avg)
-        if epoch > 3:
+        if epoch > 20:
             if not training_history['val_loss'][-1] < training_history['val_loss'][-2]:
                 early_stop_counter += 1
                 logger.debug('Early stopping counter increased by 1.')
@@ -358,7 +359,7 @@ def classify(ae, train_files, valid_files, min_value, max_value, logger):
                 if early_stop_counter > 0:
                     early_stop_counter = 0
                     logger.debug('Early stopping counter reset to 0.')
-        if early_stop_counter > 3:
+        if early_stop_counter > 10:
             logger.debug('Training terminated by early stopping.')
             break
 

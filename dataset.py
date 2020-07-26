@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from scipy.integrate import cumtrapz
+from imblearn.over_sampling import SMOTE
 
 
 def synthetic_dataset():
@@ -25,7 +26,7 @@ def real_dataset():
             new_data[i, j] = integ[trapz_per_feature * (i + 1)] - \
                              integ[trapz_per_feature * i]
     new_data = new_data / trapz_per_feature
-    dataset = new_data.T[-200:]
+    dataset = new_data.T
     _min = np.min(dataset)
     _max = np.max(dataset)
     dataset = (dataset - _min) / (_max - _min)
@@ -77,3 +78,16 @@ def balanced_sample(data, rand_seed=None):
     zeros = data[zeros_indices, :]
     ones = data[-label_counts[1]:, :]
     return np.concatenate((zeros, ones), axis=0)
+
+
+def oversample_smote(data):
+    features = data[:, :-1]
+    labels = data[:, -1]
+    n_ones = list(labels).count(1)
+    if n_ones < 6:
+        labels = np.expand_dims(labels, axis=1)
+        return np.concatenate((features, labels), axis=1)
+    oversample = SMOTE()
+    oversampled_features, oversampled_labels = oversample.fit_resample(features, labels)
+    oversampled_labels = np.expand_dims(oversampled_labels, axis=1)
+    return np.concatenate((oversampled_features, oversampled_labels), axis=1)

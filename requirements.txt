@@ -1,5 +1,7 @@
-numpy
+numpy~=1.18.4
 tensorflow==2.0.0
-deap
-matplotlib
-scipy
+deap~=1.3.1
+matplotlib~=3.2.1
+scipy~=1.4.1
+scikit-learn
+imbalanced-learn

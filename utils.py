@@ -9,7 +9,7 @@ def setup_logger(logger_name, log_path):
                                     datefmt='%Y/%m/%d %H:%M:%S')
     console_format = logging.Formatter('%(levelname)-8s %(message)s')
     logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     file_handler = logging.FileHandler(log_file_path)
     file_handler.setFormatter(file_format)
     stream_handler = logging.StreamHandler()
@@ -21,6 +21,8 @@ def setup_logger(logger_name, log_path):
 
 
 def calc_rho(indicators):
+    if len(np.shape(indicators)) == 1:
+        indicators = np.expand_dims(indicators, axis=-1)
     v = np.zeros(len(indicators.T))
     rho_mk = np.zeros(len(indicators.T))
     for i in range(len(indicators.T)):
@@ -89,3 +91,31 @@ def phi(delta):
         return (1 - np.exp(-delta / a2)) * b2
     else:
         return 1
+
+
+def true_test_labels(taus_path, test_files):
+    taus = list(np.genfromtxt(taus_path, delimiter=','))
+    labels = []
+    for tau, file in zip(taus, test_files):
+        features = np.genfromtxt(file, delimiter=',')
+        n = np.shape(features)[0]
+        if np.isnan(tau):
+            label = [0] * n
+            labels.append(np.array(label))
+        else:
+            label = [0] * int(tau-1)
+            ones = [1] * int(n - (tau-1))
+            label.extend(ones)
+            labels.append(np.array(label))
+    return labels
+
+
+def labels_to_taus(labels):
+    taus = []
+    for label in labels:
+        if np.max(label) == 0:
+            tau = np.nan
+        else:
+            tau = np.argmax(label)
+        taus.append(tau)
+    return taus

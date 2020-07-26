@@ -2,7 +2,8 @@ import os
 import datetime
 import pickle
 import coea
-import train
+import utils
+import train as tr
 import numpy as np
 import matplotlib.pyplot as plt
 import dataset as ds
@@ -23,24 +24,21 @@ logger_classifier = setup_logger(logger_name='Classifier', log_path=dirr + '/log
 layer_weights = (-1, -1)  # avg, min
 net_weights = (1, -1)  # Rho_MK, ValLoss
 
-n_gens = 3  # Number of generations
+n_gens = 50  # Number of generations
 
 logger_main.info('Loading the dataset...')
-train_files, test_files, min_value, max_value, train_elbow_points, mission_times = ds.aramis_dataset()
+train_files, test_files, min_value, max_value = ds.aramis_dataset()
 logger_main.info('Dataset loaded successfully.')
 
 # preparing the CoEA data
 np.random.seed(0)
 coea_train_idx = np.random.randint(0, len(train_files))
-# The last 200 timestamps should include the elbow point
-while (mission_times[coea_train_idx] - train_elbow_points[coea_train_idx]) >= 200:
-    coea_train_idx = np.random.randint(0, len(train_files))
 coea_eval_idx = np.random.randint(0, len(train_files))
-while (coea_train_idx == coea_eval_idx) or ((mission_times[coea_eval_idx] - train_elbow_points[coea_eval_idx]) >= 200):
+while coea_train_idx == coea_eval_idx:  # Training and evaluation data should not be the same.
     coea_eval_idx = np.random.randint(0, len(train_files))
 
-logger_main.debug('The file used for CoEA training: {}'.format(train_files[coea_train_idx]))
-logger_main.debug('The file used for CoEA evaluation: {}'.format(train_files[coea_eval_idx]))
+logger_main.info('The file used for CoEA training: {}'.format(train_files[coea_train_idx]))
+logger_main.info('The file used for CoEA evaluation: {}'.format(train_files[coea_eval_idx]))
 
 data_train = np.genfromtxt(train_files[coea_train_idx], dtype=np.float32, delimiter=',')[:, :-1]
 data_eval = np.genfromtxt(train_files[coea_eval_idx], dtype=np.float32, delimiter=',')[:, :-1]
@@ -49,17 +47,17 @@ data_eval = ds.normalize(data_eval, min_value, max_value)
 
 coea_start_time = datetime.datetime.now()
 
-ca = coea.CoEA(pop_size_bits=2,
+ca = coea.CoEA(pop_size_bits=6,
                n_layer_species=4,
                layer_weights=layer_weights,
                net_weights=net_weights,
-               iters=1000,
-               net_pop_size=6,
+               iters=5000,
+               net_pop_size=80,
                data_train=data_train,
                data_eval=data_eval)
 
 logger_main.info('The CoEA initialized with network population size of {}, layer population size of {}, and using '
-                 '{} iterations for training the AE.'.format(ca.net_pop_size, (2 ** ca.pop_size_bits), ca.iters))
+                 '{} iterations for training the AEs.'.format(ca.net_pop_size, (2 ** ca.pop_size_bits), ca.iters))
 
 toolbox = ca.toolbox
 net_population = ca.net_population
@@ -261,12 +259,30 @@ for i in range(ca.n_layer_species):
 
 
 final_pop = net_pops[-1]
-
-for i, ae in enumerate(final_pop):
-    pickle.dump(ae, open(dirr + '/saves/ae_{}.p'.format(i), 'wb'))
-
-
 first_front = toolbox.selectNSGA2fronts(final_pop, k=ca.net_pop_size)[0]
+
+for i, ae in enumerate(first_front):
+    with open(dirr + '/saves/ae_{}_net_params.pickle'.format(i), 'wb') as f:
+        pickle.dump(ae.net_params, f)
+    with open(dirr + '/saves/ae_{}_layer_params.pickle'.format(i), 'wb') as f:
+        pickle.dump(ae.layer_params, f)
+    with open(dirr + '/saves/ae_{}_fitness.pickle'.format(i), 'wb') as f:
+        pickle.dump(ae.fitness.values, f)
+    with open(dirr + '/saves/ae_{}_weights.pickle'.format(i), 'wb') as f:
+        pickle.dump(ae.final_weights, f)
+
+
+ind = first_front[0]
+indicator = tr.get_monotonic_indicator(ind.net_params, ind.layer_params,
+                                       ind.final_weights, data_eval)
+with open(dirr + '/saves/indicator.pickle', 'wb') as f:
+    pickle.dump(indicator, f)
+
+plt.figure()
+plt.plot(indicator)
+plt.xlabel('time (t)')
+plt.title('Most Monotonic Indicator')
+plt.savefig(dirr + '/indicator.png')
 
 
 # Classification
@@ -276,13 +292,10 @@ valid_split = 0.25
 valid_files = train_files[:int(valid_split * len(train_files))]
 train_files = train_files[int(valid_split * len(train_files)):]
 
-ind = first_front[0]
-
 logger_main.info('Starting the AE training...')
 ae_start_time = datetime.datetime.now()
-ae, ae_training_history = train.train_ae(ind.net_params, ind.layer_params, train_files, valid_files,
-                                         min_value, max_value, n_layers=4, weights=ind.final_weights,
-                                         logger=logger_ae)
+ae, ae_training_history = tr.train_ae(ind.net_params, ind.layer_params, train_files, valid_files,
+                                      min_value, max_value, weights=ind.final_weights, logger=logger_ae)
 ae_run_time = datetime.datetime.now() - ae_start_time
 logger_main.info('Training the AE ended. Duration: {}'.format(ae_run_time))
 
@@ -297,14 +310,17 @@ plt.legend()
 plt.title('AE Training')
 plt.savefig(dirr + '/AE_training.png')
 
+#%%
 logger_main.info('Starting the classifier training...')
 classification_start_time = datetime.datetime.now()
-classifier, classifier_training_history = train.classify(ae, train_files, valid_files, min_value, max_value,
-                                                         logger=logger_classifier)
+classifier, classifier_training_history = tr.classify(ae, train_files, valid_files, min_value, max_value,
+                                                      logger=logger_classifier)
 classification_run_time = datetime.datetime.now() - classification_start_time
 logger_main.info('Training the classifier ended. Duration: {}'.format(classification_run_time))
 
 classifier.save(dirr + '/saves/trained_classifier.h5')
+with open(dirr + '/saves/classifier_training_history.pickle', 'wb') as f:
+    pickle.dump(classifier_training_history, f)
 
 total_run_time = coea_run_time + ae_run_time + classification_run_time
 logger_main.info('Total run time: {}'.format(total_run_time))
@@ -337,4 +353,75 @@ plt.title('Classifier Training - Aramis Metric')
 plt.savefig(dirr + '/Classifier_training_metric.png')
 plt.show()
 
-# predicted test labels
+true_test_labels = utils.true_test_labels('aramis_dataset/test/labels/test_taus.csv', test_files)
+predicted_test_labels = tr.predict(classifier, test_files, min_value, max_value)
+aramis_metric = utils.aramis_metric(true_test_labels, predicted_test_labels)
+
+logger_main.info('Aramis metric for the test set is: {}'.format(aramis_metric))
+
+with open(dirr + '/saves/predicted_test_labels.pickle', 'wb') as f:
+    pickle.dump(predicted_test_labels, f)
+
+true_test_taus = utils.labels_to_taus(true_test_labels)
+predicted_test_taus = utils.labels_to_taus(predicted_test_labels)
+
+tp, tn, fp, fn = 0, 0, 0, 0
+for true_tau, predicted_tau in zip(true_test_taus, predicted_test_taus):
+    if np.isnan(true_tau) and np.isnan(predicted_tau):
+        tn += 1
+    if np.isnan(true_tau) and not np.isnan(predicted_tau):
+        fp += 1
+    if not np.isnan(true_tau) and np.isnan(predicted_tau):
+        fn += 1
+    if not np.isnan(true_tau) and not np.isnan(predicted_tau):
+        tp += 1
+
+logger_main.info('True positives:', tp, '   True negatives:', tn,
+                 '   False positives:', fp, '   False negatives:', fn)
+
+# Replacing NaNs with 1000 to be able to plot them
+for i in range(len(true_test_taus)):
+    if np.isnan(true_test_taus[i]): 
+        true_test_taus[i] = 1000
+
+for i in range(len(predicted_test_taus)):
+    if np.isnan(predicted_test_taus[i]): 
+        predicted_test_taus[i] = 1000
+
+beg = [0, 100]
+end = [100, 200]
+fig, ax = plt.subplots(nrows = 2, ncols = 1, figsize=(6, 6))
+ax[0].set_title('Time of entering the abnormal state')
+ax[1].set_xlabel('components')
+for i in range(len(beg)):
+    ax[i].plot([j for j in range(beg[i], end[i])], true_test_taus[beg[i]:end[i]], c='gray')
+    ax[i].scatter([j for j in range(beg[i], end[i])], true_test_taus[beg[i]:end[i]], label='True', c='b')
+    ax[i].scatter([j for j in range(beg[i], end[i])], predicted_test_taus[beg[i]:end[i]], label='Predicted', c='r')
+    ax[i].set_ylabel('tau')
+plt.legend()
+plt.savefig(dirr + '/taus.png')
+plt.show()
+
+n_test_sys = int(len(test_files) / 4)
+beg = 0
+end = 4
+true_test_sys_taus, predicted_test_sys_taus = [], []
+for i in range(n_test_sys):
+    true_sys_tau = max(true_test_taus[beg:end])
+    predicted_sys_tau = max(predicted_test_taus[beg:end])
+    true_test_sys_taus.append(true_sys_tau)
+    predicted_test_sys_taus.append(predicted_sys_tau)
+    beg += 4
+    end += 4
+
+plt.figure()
+plt.plot(true_test_sys_taus, c='gray')
+plt.scatter([j for j in range(50)], true_test_sys_taus, label='True', c='b')
+plt.scatter([j for j in range(50)], predicted_test_sys_taus, label='Predicted', c='r')
+plt.xlabel('Systems')
+plt.ylabel('Failure time')
+plt.title('System Failure Times')
+plt.legend()
+plt.yticks(range(900, 1001, 10))
+plt.savefig(dirr + '/sys_failure_times.png')
+plt.show()

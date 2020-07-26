@@ -115,7 +115,7 @@ class CoEA:
         self.layer_ind_size = sum(self.layer_gene_bits.values())
         self.net_ind_size = sum(self.net_gene_bits.values())
 
-        # position of the first layer gene in net weights
+        # position of the first layer gene in net chromosome
         self.pos = len(self.net_gene_bits) - n_layer_species
 
         self.toolbox = base.Toolbox()

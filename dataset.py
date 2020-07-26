@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from scipy.integrate import cumtrapz
+from imblearn.over_sampling import SMOTE
 
 
 def synthetic_dataset():
@@ -25,7 +26,7 @@ def real_dataset():
             new_data[i, j] = integ[trapz_per_feature * (i + 1)] - \
                              integ[trapz_per_feature * i]
     new_data = new_data / trapz_per_feature
-    dataset = new_data.T[-200:]
+    dataset = new_data.T
     _min = np.min(dataset)
     _max = np.max(dataset)
     dataset = (dataset - _min) / (_max - _min)
@@ -44,8 +45,6 @@ def aramis_dataset(train_path='aramis_dataset/train/data_csv',
         test_files[i] = os.path.join(test_path, test_files[i])
     _min, _max = 0, 0
     train_files_with_elbow_point = []
-    elbow_points = []
-    mission_times = []
     for file in train_files:
         matrix = np.genfromtxt(file, dtype=np.float32, delimiter=',')
         features = matrix[:, :-1]
@@ -56,17 +55,39 @@ def aramis_dataset(train_path='aramis_dataset/train/data_csv',
             if np.max(features) > _max:
                 _max = np.max(features)
             train_files_with_elbow_point.append(file)
-            elbow_points.append(np.argmax(labels))
-            mission_times.append(len(labels))
     for file in test_files:
         features = np.genfromtxt(file, dtype=np.float32, delimiter=',')
         if np.min(features) < _min:
             _min = np.min(features)
         if np.max(features) > _max:
             _max = np.max(features)
-    return train_files_with_elbow_point, test_files, _min, _max, elbow_points, mission_times
+    return train_files_with_elbow_point, test_files, _min, _max
 
 
 def normalize(data, min_value, max_value):
     """Normalizes the given data, so that the given min and max value correspond to 0, 1"""
     return (data - min_value) / (max_value - min_value)
+
+
+def balanced_sample(data, rand_seed=None):
+    np.random.seed(rand_seed)
+    labels = data[:, -1]
+    label, count = np.unique(labels, return_counts=True)
+    label_counts = dict(zip(label, count))
+    zeros_indices = np.sort(np.random.choice(list(range(label_counts[0])), size=label_counts[1], replace=False))
+    zeros = data[zeros_indices, :]
+    ones = data[-label_counts[1]:, :]
+    return np.concatenate((zeros, ones), axis=0)
+
+
+def oversample_smote(data):
+    features = data[:, :-1]
+    labels = data[:, -1]
+    n_ones = list(labels).count(1)
+    if n_ones < 6:
+        labels = np.expand_dims(labels, axis=1)
+        return np.concatenate((features, labels), axis=1)
+    oversample = SMOTE()
+    oversampled_features, oversampled_labels = oversample.fit_resample(features, labels)
+    oversampled_labels = np.expand_dims(oversampled_labels, axis=1)
+    return np.concatenate((oversampled_features, oversampled_labels), axis=1)
